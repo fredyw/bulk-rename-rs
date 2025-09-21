@@ -1,7 +1,7 @@
 # bmv
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Build & Test](https://github.com/fredyw/bmv/actions/workflows/build-test.yml/badge.svg)](https://github.com/fredyw/bmv/actions/workflows/build-test.yml)
+[![bmv](https://github.com/fredyw/bmv/actions/workflows/bmv.yml/badge.svg)](https://github.com/fredyw/bmv/actions/workflows/bmv.yml)
 
 A CLI to do a bulk rename.
 

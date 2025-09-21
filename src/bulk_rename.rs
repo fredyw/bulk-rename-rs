@@ -32,6 +32,12 @@ pub trait Callback: Sync + Send {
 /// A no-op `Callback`.
 pub struct NoOpCallback {}
 
+impl Default for NoOpCallback {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl NoOpCallback {
     /// Creates a new no-op `Callback`.
     pub fn new() -> Self {
@@ -51,7 +57,7 @@ impl<'a> BulkRename<'a> {
         if !dir.is_dir() {
             return Err(Error::NotDirError);
         }
-        let regex = Regex::new(regex).map_err(|e| Error::RegexError(e))?;
+        let regex = Regex::new(regex).map_err(Error::RegexError)?;
         Ok(Self {
             dir,
             regex,
@@ -81,7 +87,7 @@ impl<'a> BulkRename<'a> {
                             if old_file_name != new_file_name {
                                 let mut new_path = path.to_path_buf();
                                 new_path.set_file_name(new_file_name);
-                                f(&path, &new_path);
+                                f(path, &new_path);
                             }
                         }
                     }
