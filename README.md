@@ -5,9 +5,21 @@
 
 A CLI to do a bulk rename.
 
-## Usage
+## Table of Contents
 
-### CLI
+- [Usage](#usage)
+    - [CLI](#cli)
+    - [API](#api)
+- [Building](#building)
+- [Installing](#installing)
+- [Testing](#testing)
+- [Contributing](#contributing)
+- [License](#license)
+
+### Usage
+
+#### CLI
+
 ```
 Usage: bmv [OPTIONS] --dir <DIR> --regex <REGEX> --replacement <REPLACEMENT>
 
@@ -21,7 +33,8 @@ Options:
   -V, --version                    Print version
 ```
 
-### API
+#### API
+
 ```rust
 struct SimpleCallback {}
 
@@ -55,3 +68,27 @@ match BulkRename::new(Path::new("tmp"), r"(test)_(\d+).txt", r"${2}_${1}.txt") {
     }
 }
 ```
+
+### Installing
+
+To install `load-rs`, you can use the following command.:
+
+```
+./install.sh
+```
+
+### Testing
+
+To run the tests, you can use the following command:
+
+```
+./test.sh
+```
+
+### Contributing
+
+Contributions are welcome! Please feel free to submit a pull request or open an issue.
+
+### License
+
+This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.
