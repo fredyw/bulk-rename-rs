@@ -71,7 +71,7 @@ match BulkRename::new(Path::new("tmp"), r"(test)_(\d+).txt", r"${2}_${1}.txt") {
 
 ### Installing
 
-To install `load-rs`, you can use the following command.:
+To install `load-rs`, you can use the following command.
 
 ```
 ./install.sh
@@ -79,7 +79,7 @@ To install `load-rs`, you can use the following command.:
 
 ### Testing
 
-To run the tests, you can use the following command:
+To run the tests, you can use the following command.
 
 ```
 ./test.sh
