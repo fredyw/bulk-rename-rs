@@ -1,5 +1,6 @@
 use rayon::prelude::*;
 use regex::Regex;
+use std::borrow::Cow;
 use std::path::Path;
 use std::{fs, io};
 use walkdir::WalkDir;
@@ -74,21 +75,17 @@ impl<'a> BulkRename<'a> {
         WalkDir::new(self.dir)
             .into_iter()
             .filter_map(|entry| entry.ok())
+            .filter(|entry| entry.file_type().is_file())
             .par_bridge()
             .for_each(|entry| {
                 let path = entry.path();
-                if path.is_file() {
-                    if let Some(file_name) = path.file_name() {
-                        if let Some(old_file_name) = file_name.to_str() {
-                            let new_file_name = self
-                                .regex
-                                .replace_all(old_file_name, self.replacement)
-                                .to_string();
-                            if old_file_name != new_file_name {
-                                let mut new_path = path.to_path_buf();
-                                new_path.set_file_name(new_file_name);
-                                f(path, &new_path);
-                            }
+                if let Some(old_file_name) = path.file_name().and_then(|n| n.to_str()) {
+                    let new_file_name = self.regex.replace_all(old_file_name, self.replacement);
+                    if let Cow::Owned(new_name) = new_file_name {
+                        if old_file_name != new_name {
+                            let mut new_path = path.to_path_buf();
+                            new_path.set_file_name(new_name);
+                            f(path, &new_path);
                         }
                     }
                 }
