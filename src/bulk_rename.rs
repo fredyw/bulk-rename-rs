@@ -5,28 +5,31 @@ use std::path::Path;
 use std::{fs, io};
 use walkdir::WalkDir;
 
-#[derive(Debug)]
+/// A bulk rename operation.
 pub struct BulkRename<'a> {
+    /// The directory to search for files.
     dir: &'a Path,
+    /// The regular expression to match against file names.
     regex: Regex,
+    /// The replacement string for matched file names.
     replacement: &'a str,
 }
 
 /// Possible errors when running a bulk rename.
 #[derive(Debug)]
 pub enum Error {
-    /// An error for when the path is not a directory.
+    /// The provided path is not a directory.
     NotDirError,
-    /// An error for when the regex is invalid.
+    /// The provided regular expression is invalid.
     RegexError(regex::Error),
 }
 
 /// A callback for the bulk rename.
 pub trait Callback: Sync + Send {
-    /// This function is called when the rename operation was successful.
+    /// Called when a file rename operation was successful.
     fn on_ok(&self, old_path: &Path, new_path: &Path);
 
-    /// This function is called when the rename operation was unsuccessful.
+    /// Called when a file rename operation failed.
     fn on_error(&self, old_path: &Path, new_path: &Path, error: io::Error);
 }
 
@@ -66,8 +69,11 @@ impl<'a> BulkRename<'a> {
         })
     }
 
-    /// Executes a function `f` for any files that match the specified regex. The function `f` will
-    /// not be called if the old file name is the same as the new file name.
+    /// Executes a function `f` for any files that match the specified regex.
+    ///
+    /// The function `f` is called with the original path and the calculated new path.
+    /// It will not be called if the file name remains unchanged after replacement.
+    /// This operation is performed in parallel across multiple threads.
     pub fn bulk_rename_fn<F>(&self, f: F)
     where
         F: Fn(&Path, &Path) + Sync + Send,
@@ -92,7 +98,9 @@ impl<'a> BulkRename<'a> {
             });
     }
 
-    /// Runs a bulk rename with a `Callback`.
+    /// Performs the bulk rename operation, notifying the provided `callback` of each outcome.
+    ///
+    /// Files are renamed in place. This operation is performed in parallel across multiple threads.
     pub fn bulk_rename(&self, callback: impl Callback) {
         self.bulk_rename_fn(|old_path, new_path| match fs::rename(old_path, new_path) {
             Ok(_) => {

@@ -1,5 +1,7 @@
+//! Main entry point for the `bmv` CLI tool.
 extern crate bmv;
 extern crate clap;
+
 
 use bmv::bulk_rename::BulkRename;
 use bmv::bulk_rename::Callback;
@@ -31,11 +33,14 @@ struct Args {
     quiet: bool,
 }
 
+/// A callback implementation for the CLI.
 struct CliCallback {
+    /// Whether to suppress output.
     quiet: bool,
 }
 
 impl CliCallback {
+    /// Creates a new `CliCallback`.
     fn new(quiet: bool) -> Self {
         Self { quiet }
     }
@@ -60,6 +65,7 @@ impl Callback for CliCallback {
     }
 }
 
+/// Main entry point for the application.
 fn main() {
     let args = Args::parse();
     let path = args.dir.as_path();
