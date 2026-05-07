@@ -1,6 +1,7 @@
 extern crate bmv;
 
 use bmv::{BulkRename, Error, NoOpCallback};
+use regex::Regex;
 use std::fs;
 use std::fs::File;
 use std::path::Path;
@@ -199,6 +200,50 @@ fn bulk_rename_counter_padding() {
     });
 
     assert!(names.contains(&"file_001.txt".to_string()));
+
+    fs::remove_dir_all(tmp_path).unwrap();
+}
+
+#[test]
+fn bulk_rename_date() {
+    let tmp_path = Path::new("tmp_date");
+    fs::create_dir_all(tmp_path).unwrap();
+    File::create("tmp_date/file.txt").unwrap();
+
+    let bulk_rename = BulkRename::new(tmp_path, r"file\.txt", r"file_{date}.txt").unwrap();
+
+    let mut names = Vec::new();
+    bulk_rename.run_seq(|_, new| {
+        names.push(new.file_name().unwrap().to_string_lossy().to_string());
+    });
+
+    let name = &names[0];
+    let re = Regex::new(r"file_\d{4}-\d{2}-\d{2}\.txt").unwrap();
+    assert!(
+        re.is_match(name),
+        "Name {} did not match expected date format",
+        name
+    );
+
+    fs::remove_dir_all(tmp_path).unwrap();
+}
+
+#[test]
+fn bulk_rename_date_custom() {
+    let tmp_path = Path::new("tmp_date_custom");
+    fs::create_dir_all(tmp_path).unwrap();
+    File::create("tmp_date_custom/file.txt").unwrap();
+
+    let bulk_rename = BulkRename::new(tmp_path, r"file\.txt", r"file_{date:%Y}.txt").unwrap();
+
+    let mut names = Vec::new();
+    bulk_rename.run_seq(|_, new| {
+        names.push(new.file_name().unwrap().to_string_lossy().to_string());
+    });
+
+    let name = &names[0];
+    let current_year = chrono::Local::now().format("%Y").to_string();
+    assert_eq!(name, &format!("file_{}.txt", current_year));
 
     fs::remove_dir_all(tmp_path).unwrap();
 }

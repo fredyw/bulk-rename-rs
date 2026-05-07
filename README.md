@@ -3,24 +3,67 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![CI](https://github.com/fredyw/bmv/actions/workflows/ci.yml/badge.svg)](https://github.com/fredyw/bmv/actions/workflows/ci.yml)
 
-A CLI to do a bulk rename.
+A powerful command-line tool for bulk renaming files using regular expressions, built with Rust for speed and safety.
 
 ## Table of Contents
 
+- [Features](#features)
+    - [Dynamic Variables](#dynamic-variables)
+    - [Collision Handling](#collision-handling)
+    - [Undo & Rollback](#undo--rollback)
+    - [Filtering](#filtering)
+    - [Interactive Mode](#interactive-mode)
 - [Usage](#usage)
     - [CLI](#cli)
     - [API](#api)
-- [Building](#building)
-- [Installing](#installing)
+- [Installation](#installation)
 - [Testing](#testing)
 - [Contributing](#contributing)
 - [License](#license)
 
-### Usage
+## Features
 
-#### CLI
+### Dynamic Variables
+Placeholders in the replacement string allow for dynamic naming:
+- `{i}`: An auto-incrementing counter. Use `{i:N}` (e.g., `{i:3}`) for padding (e.g., `001`).
+- `{date}`: The file's modification date in `%Y-%m-%d` format.
+- `{date:FORMAT}`: The file's modification date with a custom [chrono format](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) (e.g., `{date:%Y%m%d}`).
 
+> [!NOTE]
+> When dynamic variables are used, files are processed in alphabetical order to ensure deterministic assignment.
+
+### Collision Handling
+Define how to handle cases where the target filename already exists using the `--collision` flag:
+- `skip` (default): Skip the rename if the destination exists.
+- `overwrite`: Replace the existing file.
+- `suffix`: Append a numeric suffix (e.g., `file.txt` -> `file (1).txt`).
+
+### Undo & Rollback
+Mistakes happen. `bmv` tracks renames in a history file (defaults to `.bmv-undo.json`), allowing you to revert the last operation:
+```bash
+bmv --undo
 ```
+
+### Filtering
+Precisely target files using multiple filtering options:
+- **Extensions**: Filter by file extension (e.g., `--ext jpg,png`).
+- **Include/Exclude**: Use regex patterns to include or exclude specific files.
+- **Max Depth**: Control recursion depth (e.g., `--max-depth 1` for current directory only).
+
+> [!IMPORTANT]
+> **Precedence**: `exclude` patterns have the highest priority. If a file matches both an `include` and an `exclude` pattern, it will be **excluded**.
+
+### Interactive Mode
+For sensitive renames, use the `--interactive` (or `-i`) flag to prompt for confirmation before each file is renamed.
+
+### Parallel Execution
+`bmv` leverages `rayon` to perform renaming operations in parallel across multiple threads, making it extremely fast even for thousands of files.
+
+## Usage
+
+### CLI
+
+```bash
 Usage: bmv [OPTIONS] --dir <DIR>
        bmv [OPTIONS] --dir <DIR> --regex <REGEX> --replacement <REPLACEMENT>
        bmv --undo [OPTIONS]
@@ -45,20 +88,9 @@ Options:
   -V, --version                    Print version
 ```
 
-> [!NOTE]
-> **Dynamic Variables:** You can use `{i}` for an auto-incrementing counter in the replacement string. 
-> Use `{i:N}` (e.g., `{i:3}`) to specify padding with leading zeros (e.g., `001`, `002`).
-> **Note:** When `{i}` is used, files are processed in alphabetical order to ensure deterministic counter assignment.
->
-> [!NOTE]
-> **Execution Mode:** While `bmv` always plans renames sequentially (to ensure deterministic counters and sorting), the actual **renaming operations** happen in parallel by default.
->
-> It only switches to **sequential renaming** when `--interactive` is used, to allow for step-by-step confirmation.
+### API
 
-> [!NOTE]
-> **Precedence:** `exclude` patterns have the highest priority. If a file matches both an `include` and an `exclude` pattern, it will be **excluded**.
-
-#### API
+`bmv` can also be used as a library in your Rust projects:
 
 ```rust
 use bmv::{BulkRename, Callback, CollisionStrategy};
@@ -66,59 +98,44 @@ use std::path::Path;
 
 struct SimpleCallback {}
 
-impl SimpleCallback {
-    fn new() -> Self {
-        Self {}
-    }
-}
-
 impl Callback for SimpleCallback {
     fn on_ok(&self, old_path: &Path, new_path: &Path) {
         println!("OK: {} --> {}", old_path.display(), new_path.display());
     }
 
     fn on_error(&self, old_path: &Path, new_path: &Path, error: std::io::Error) {
-        eprintln!(
-            "Error: Unable to rename {} to {}: {}",
-            old_path.display(),
-            new_path.display(),
-            error
-        );
+        eprintln!("Error: Unable to rename {} to {}: {}", old_path.display(), new_path.display(), error);
     }
 }
+
 fn main() {
     let bulk_rename = BulkRename::new(Path::new("./files"), r"old_(.*)\.txt", r"new_$1.txt").unwrap();
     
     // Execute renames in parallel with a callback
     bulk_rename.execute(SimpleCallback::new());
-
-    // Or run with a custom closure
-    bulk_rename.run(|old, new| {
-        println!("Renaming {} to {}", old.display(), new.display());
-    });
 }
 ```
 
-### Installing
+## Installation
 
-To install `bmv`, you can use the following command.
+To install `bmv`, you can use the provided installation script:
 
-```
+```bash
 ./install.sh
 ```
 
-### Testing
+## Testing
 
-To run the tests, you can use the following command.
+To run the test suite, use the following command:
 
-```
+```bash
 ./test.sh
 ```
 
-### Contributing
+## Contributing
 
 Contributions are welcome! Please feel free to submit a pull request or open an issue.
 
-### License
+## License
 
 This project is licensed under the Apache License 2.0. See the [LICENSE](LICENSE) file for details.

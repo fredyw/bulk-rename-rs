@@ -1,6 +1,7 @@
 use crate::callback::Callback;
 use crate::error::Error;
 use crate::models::{CollisionStrategy, RenameHistory};
+use chrono::{DateTime, Local};
 use rayon::prelude::*;
 use regex::Regex;
 use std::borrow::Cow;
@@ -189,7 +190,7 @@ impl<'a> BulkRename<'a> {
             if let Cow::Owned(new_name) = new_file_name {
                 if old_file_name != new_name {
                     let mut new_path = path.to_path_buf();
-                    let processed_name = self.process_dynamic_variables(&new_name);
+                    let processed_name = self.process_dynamic_variables(&new_name, path);
                     new_path.set_file_name(processed_name);
                     f(path, &new_path);
                 }
@@ -282,7 +283,7 @@ impl<'a> BulkRename<'a> {
         Some(final_path)
     }
 
-    fn process_dynamic_variables(&self, name: &str) -> String {
+    fn process_dynamic_variables(&self, name: &str, path: &Path) -> String {
         let mut result = name.to_string();
 
         // Handle {i} and {i:N}
@@ -297,6 +298,24 @@ impl<'a> BulkRename<'a> {
                         }
                     }
                     i.to_string()
+                })
+                .to_string();
+        }
+
+        // Handle {date} and {date:FORMAT}
+        if result.contains("{date") {
+            let mtime = fs::metadata(path)
+                .and_then(|m| m.modified())
+                .map(DateTime::<Local>::from)
+                .unwrap_or_else(|_| Local::now());
+
+            let re_date = Regex::new(r"\{date(?::([^}]+))?\}").unwrap();
+            result = re_date
+                .replace_all(&result, |caps: &regex::Captures| {
+                    if let Some(fmt) = caps.get(1) {
+                        return mtime.format(fmt.as_str()).to_string();
+                    }
+                    mtime.format("%Y-%m-%d").to_string()
                 })
                 .to_string();
         }
