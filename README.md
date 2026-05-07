@@ -1,7 +1,7 @@
 # bmv
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![bmv](https://github.com/fredyw/bmv/actions/workflows/bmv.yml/badge.svg)](https://github.com/fredyw/bmv/actions/workflows/bmv.yml)
+[![CI](https://github.com/fredyw/bmv/actions/workflows/ci.yml/badge.svg)](https://github.com/fredyw/bmv/actions/workflows/ci.yml)
 
 A CLI to do a bulk rename.
 
@@ -71,7 +71,7 @@ match BulkRename::new(Path::new("tmp"), r"(test)_(\d+).txt", r"${2}_${1}.txt") {
 
 ### Installing
 
-To install `load-rs`, you can use the following command.
+To install `bmv`, you can use the following command.
 
 ```
 ./install.sh
