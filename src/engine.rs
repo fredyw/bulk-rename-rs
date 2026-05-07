@@ -7,6 +7,7 @@ use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 use walkdir::WalkDir;
 
@@ -29,6 +30,8 @@ pub struct BulkRename<'a> {
     exclude_patterns: Vec<Regex>,
     /// The maximum depth for recursion.
     max_depth: Option<usize>,
+    /// The current counter value for {i}.
+    counter: AtomicUsize,
 }
 
 impl<'a> BulkRename<'a> {
@@ -47,6 +50,7 @@ impl<'a> BulkRename<'a> {
             include_patterns: Vec::new(),
             exclude_patterns: Vec::new(),
             max_depth: None,
+            counter: AtomicUsize::new(1),
         })
     }
 
@@ -97,6 +101,12 @@ impl<'a> BulkRename<'a> {
         self
     }
 
+    /// Sets the starting value for the counter {i}.
+    pub fn with_counter_start(self, start: usize) -> Self {
+        self.counter.store(start, Ordering::SeqCst);
+        self
+    }
+
     /// Executes a function `f` for any files that match the specified regex.
     ///
     /// The function `f` is called with the original path and the calculated new path.
@@ -106,59 +116,87 @@ impl<'a> BulkRename<'a> {
     where
         F: Fn(&Path, &Path) + Sync + Send,
     {
-        let mut walker = WalkDir::new(self.dir);
-        if let Some(depth) = self.max_depth {
-            walker = walker.max_depth(depth);
-        }
-        walker
-            .into_iter()
-            .filter_map(|entry| entry.ok())
-            .filter(|entry| entry.file_type().is_file())
-            .filter(|entry| {
-                if self.extensions.is_empty() {
-                    return true;
-                }
-                entry
-                    .path()
-                    .extension()
-                    .and_then(|ext| ext.to_str())
-                    .map(|ext| self.extensions.contains(ext))
-                    .unwrap_or(false)
-            })
-            .filter(|entry| {
-                let path_str = entry.path().to_string_lossy();
-                if !self.exclude_patterns.is_empty()
-                    && self
-                        .exclude_patterns
-                        .iter()
-                        .any(|re| re.is_match(&path_str))
-                {
-                    return false;
-                }
-                if !self.include_patterns.is_empty()
-                    && !self
-                        .include_patterns
-                        .iter()
-                        .any(|re| re.is_match(&path_str))
-                {
-                    return false;
-                }
-                true
-            })
-            .par_bridge()
-            .for_each(|entry| {
-                let path = entry.path();
-                if let Some(old_file_name) = path.file_name().and_then(|n| n.to_str()) {
-                    let new_file_name = self.regex.replace_all(old_file_name, self.replacement);
-                    if let Cow::Owned(new_name) = new_file_name {
-                        if old_file_name != new_name {
-                            let mut new_path = path.to_path_buf();
-                            new_path.set_file_name(new_name);
-                            f(path, &new_path);
-                        }
-                    }
-                }
+        let is_dynamic = self.replacement.contains("{i");
+
+        if is_dynamic {
+            // Collect and sort for deterministic counter assignment
+            let mut entries: Vec<_> = WalkDir::new(self.dir)
+                .into_iter()
+                .filter_map(|entry| entry.ok())
+                .filter(|entry| entry.file_type().is_file())
+                .filter(|entry| self.filter_entry(entry))
+                .collect();
+
+            entries.sort_by(|a, b| a.path().cmp(b.path()));
+
+            entries.into_iter().for_each(|entry| {
+                self.process_entry(entry.path(), &f);
             });
+        } else {
+            let mut walker = WalkDir::new(self.dir);
+            if let Some(depth) = self.max_depth {
+                walker = walker.max_depth(depth);
+            }
+            walker
+                .into_iter()
+                .filter_map(|entry| entry.ok())
+                .filter(|entry| entry.file_type().is_file())
+                .filter(|entry| self.filter_entry(entry))
+                .par_bridge()
+                .for_each(|entry| {
+                    self.process_entry(entry.path(), |old, new| f(old, new));
+                });
+        }
+    }
+
+    fn filter_entry(&self, entry: &walkdir::DirEntry) -> bool {
+        if !self.extensions.is_empty() {
+            let match_ext = entry
+                .path()
+                .extension()
+                .and_then(|ext| ext.to_str())
+                .map(|ext| self.extensions.contains(ext))
+                .unwrap_or(false);
+            if !match_ext {
+                return false;
+            }
+        }
+
+        let path_str = entry.path().to_string_lossy();
+        if !self.exclude_patterns.is_empty()
+            && self
+                .exclude_patterns
+                .iter()
+                .any(|re| re.is_match(&path_str))
+        {
+            return false;
+        }
+        if !self.include_patterns.is_empty()
+            && !self
+                .include_patterns
+                .iter()
+                .any(|re| re.is_match(&path_str))
+        {
+            return false;
+        }
+        true
+    }
+
+    fn process_entry<F>(&self, path: &Path, mut f: F)
+    where
+        F: FnMut(&Path, &Path),
+    {
+        if let Some(old_file_name) = path.file_name().and_then(|n| n.to_str()) {
+            let new_file_name = self.regex.replace_all(old_file_name, self.replacement);
+            if let Cow::Owned(new_name) = new_file_name {
+                if old_file_name != new_name {
+                    let mut new_path = path.to_path_buf();
+                    let processed_name = self.process_dynamic_variables(&new_name);
+                    new_path.set_file_name(processed_name);
+                    f(path, &new_path);
+                }
+            }
+        }
     }
 
     /// Sequential version of `bulk_rename_fn`.
@@ -166,58 +204,20 @@ impl<'a> BulkRename<'a> {
     where
         F: FnMut(&Path, &Path),
     {
-        let mut walker = WalkDir::new(self.dir);
-        if let Some(depth) = self.max_depth {
-            walker = walker.max_depth(depth);
-        }
-        walker
+        let mut entries: Vec<_> = WalkDir::new(self.dir)
             .into_iter()
             .filter_map(|entry| entry.ok())
             .filter(|entry| entry.file_type().is_file())
-            .filter(|entry| {
-                if self.extensions.is_empty() {
-                    return true;
-                }
-                entry
-                    .path()
-                    .extension()
-                    .and_then(|ext| ext.to_str())
-                    .map(|ext| self.extensions.contains(ext))
-                    .unwrap_or(false)
-            })
-            .filter(|entry| {
-                let path_str = entry.path().to_string_lossy();
-                if !self.exclude_patterns.is_empty()
-                    && self
-                        .exclude_patterns
-                        .iter()
-                        .any(|re| re.is_match(&path_str))
-                {
-                    return false;
-                }
-                if !self.include_patterns.is_empty()
-                    && !self
-                        .include_patterns
-                        .iter()
-                        .any(|re| re.is_match(&path_str))
-                {
-                    return false;
-                }
-                true
-            })
-            .for_each(|entry| {
-                let path = entry.path();
-                if let Some(old_file_name) = path.file_name().and_then(|n| n.to_str()) {
-                    let new_file_name = self.regex.replace_all(old_file_name, self.replacement);
-                    if let Cow::Owned(new_name) = new_file_name {
-                        if old_file_name != new_name {
-                            let mut new_path = path.to_path_buf();
-                            new_path.set_file_name(new_name);
-                            f(path, &new_path);
-                        }
-                    }
-                }
-            });
+            .filter(|entry| self.filter_entry(entry))
+            .collect();
+
+        if self.replacement.contains("{i") {
+            entries.sort_by(|a, b| a.path().cmp(b.path()));
+        }
+
+        entries.into_iter().for_each(|entry| {
+            self.process_entry(entry.path(), |old, new| f(old, new));
+        });
     }
 
     /// Performs the bulk rename operation, notifying the provided `callback` of each outcome.
@@ -292,6 +292,28 @@ impl<'a> BulkRename<'a> {
             }
         }
         Some(final_path)
+    }
+
+    fn process_dynamic_variables(&self, name: &str) -> String {
+        let mut result = name.to_string();
+
+        // Handle {i} and {i:N}
+        if result.contains("{i") {
+            let i = self.counter.fetch_add(1, Ordering::SeqCst);
+            let re_i = Regex::new(r"\{i(?::(\d+))?\}").unwrap();
+            result = re_i
+                .replace_all(&result, |caps: &regex::Captures| {
+                    if let Some(padding) = caps.get(1) {
+                        if let Ok(p) = padding.as_str().parse::<usize>() {
+                            return format!("{:0>width$}", i, width = p);
+                        }
+                    }
+                    i.to_string()
+                })
+                .to_string();
+        }
+
+        result
     }
 
     fn is_same_file(p1: &Path, p2: &Path) -> bool {

@@ -162,3 +162,43 @@ fn bulk_rename_max_depth() {
 
     fs::remove_dir_all(tmp_path).unwrap();
 }
+
+#[test]
+fn bulk_rename_counter() {
+    let tmp_path = Path::new("tmp_counter");
+    fs::create_dir_all(tmp_path).unwrap();
+    File::create("tmp_counter/file_a.txt").unwrap();
+    File::create("tmp_counter/file_b.txt").unwrap();
+
+    let bulk_rename = BulkRename::new(tmp_path, r"file_(.*)\.txt", r"image_{i}.txt")
+        .unwrap()
+        .with_counter_start(10);
+    // Use sequential to ensure deterministic order for test assertion
+    bulk_rename.bulk_rename_fn_seq(|old, new| {
+        fs::rename(old, new).unwrap();
+    });
+
+    assert!(Path::new("tmp_counter/image_10.txt").exists());
+    assert!(Path::new("tmp_counter/image_11.txt").exists());
+
+    fs::remove_dir_all(tmp_path).unwrap();
+}
+
+#[test]
+fn bulk_rename_counter_padding() {
+    let tmp_path = Path::new("tmp_counter_pad");
+    fs::create_dir_all(tmp_path).unwrap();
+    File::create("tmp_counter_pad/file.txt").unwrap();
+
+    let bulk_rename = BulkRename::new(tmp_path, r"file\.txt", r"file_{i:3}.txt").unwrap();
+
+    // Let's do real renames.
+    let mut names = Vec::new();
+    bulk_rename.bulk_rename_fn_seq(|_, new| {
+        names.push(new.file_name().unwrap().to_string_lossy().to_string());
+    });
+
+    assert!(names.contains(&"file_001.txt".to_string()));
+
+    fs::remove_dir_all(tmp_path).unwrap();
+}

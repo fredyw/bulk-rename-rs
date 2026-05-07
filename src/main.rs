@@ -67,6 +67,10 @@ struct Args {
     /// Set the maximum depth for recursion (1 for current directory only).
     #[arg(long)]
     max_depth: Option<usize>,
+
+    /// Set the starting value for the counter {i}.
+    #[arg(long, default_value_t = 1)]
+    counter_start: usize,
 }
 
 /// A callback implementation for the CLI.
@@ -122,7 +126,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .with_extensions(args.ext.into_iter().collect())
         .with_include_patterns(args.include)?
         .with_exclude_patterns(args.exclude)?
-        .with_max_depth(args.max_depth);
+        .with_max_depth(args.max_depth)
+        .with_counter_start(args.counter_start);
 
     if args.dry_run {
         let targets = Mutex::new(HashSet::new());

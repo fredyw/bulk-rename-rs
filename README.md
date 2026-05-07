@@ -40,8 +40,14 @@ Options:
   -c, --collision <STRATEGY>       Set the collision strategy [default: skip] [possible values: skip, overwrite, suffix]
       --undo                       Undo the previous rename operation
       --history-file <PATH>        Set the history file path [default: .bmv-undo.json]
+      --counter-start <START>      Set the starting value for the counter {i} [default: 1]
   -h, --help                       Print help
   -V, --version                    Print version
+
+> [!NOTE]
+> **Dynamic Variables:** You can use `{i}` for an auto-incrementing counter in the replacement string. 
+> Use `{i:N}` (e.g., `{i:3}`) to specify padding with leading zeros (e.g., `001`, `002`).
+> **Note:** When `{i}` is used, files are processed in alphabetical order to ensure deterministic counter assignment.
 
 > [!NOTE]
 > **Precedence:** `exclude` patterns have the highest priority. If a file matches both an `include` and an `exclude` pattern, it will be **excluded**.
