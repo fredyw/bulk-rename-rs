@@ -7,7 +7,7 @@
 [![Publish](https://github.com/fredyw/bulk-rename-rs/actions/workflows/publish.yml/badge.svg)](https://github.com/fredyw/bulk-rename-rs/actions/workflows/publish.yml)
 [![Crates.io](https://img.shields.io/crates/v/bulk-rename-rs.svg)](https://crates.io/crates/bulk-rename-rs)
 
-A powerful command-line tool for bulk renaming files using regular expressions, built with Rust for speed and safety.
+A powerful command-line tool for bulk renaming files using regular expressions, Python scripting, and dynamic transformations, built with Rust for speed and safety.
 
 ## Table of Contents
 

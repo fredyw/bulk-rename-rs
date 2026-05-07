@@ -1,4 +1,4 @@
-//! `bulk-rename-rs` is a command-line tool for bulk renaming files using regular expressions.
+//! `bulk-rename-rs` is a command-line tool and library for bulk renaming files using regular expressions, Python scripting, and dynamic transformations.
 
 pub mod callback;
 pub mod engine;
