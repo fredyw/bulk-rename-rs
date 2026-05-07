@@ -6,6 +6,7 @@ use std::{fs, io};
 use walkdir::WalkDir;
 
 /// A bulk rename operation.
+#[derive(Debug)]
 pub struct BulkRename<'a> {
     /// The directory to search for files.
     dir: &'a Path,

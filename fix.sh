@@ -2,6 +2,11 @@
 
 set -ueo pipefail
 
+echo "Running formatting..."
 cargo fmt
-cargo fix --allow-dirty
-cargo clippy --fix --allow-dirty
+
+echo "Running fix..."
+cargo fix --allow-dirty --all-targets --all-features
+
+echo "Running clippy fix..."
+cargo clippy --fix --allow-dirty --all-targets --all-features
