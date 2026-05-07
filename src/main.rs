@@ -63,6 +63,10 @@ struct Args {
     /// Exclude files matching these patterns (comma-separated).
     #[arg(long, value_delimiter = ',')]
     exclude: Vec<String>,
+
+    /// Set the maximum depth for recursion (1 for current directory only).
+    #[arg(long)]
+    max_depth: Option<usize>,
 }
 
 /// A callback implementation for the CLI.
@@ -117,7 +121,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .with_case_insensitive(args.ignore_case)?
         .with_extensions(args.ext.into_iter().collect())
         .with_include_patterns(args.include)?
-        .with_exclude_patterns(args.exclude)?;
+        .with_exclude_patterns(args.exclude)?
+        .with_max_depth(args.max_depth);
 
     if args.dry_run {
         let targets = Mutex::new(HashSet::new());

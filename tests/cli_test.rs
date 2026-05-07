@@ -373,3 +373,32 @@ fn test_cli_include_exclude() {
     assert!(file2.exists());
     assert!(!file1.exists());
 }
+
+#[test]
+fn test_cli_max_depth() {
+    let dir = tempdir().unwrap();
+    let sub = dir.path().join("sub");
+    std::fs::create_dir(&sub).unwrap();
+    let file1 = dir.path().join("test_1.txt");
+    let file2 = sub.join("test_2.txt");
+    File::create(&file1).unwrap();
+    File::create(&file2).unwrap();
+
+    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    cmd.arg("-f")
+        .arg(dir.path())
+        .arg("-r")
+        .arg("test")
+        .arg("-p")
+        .arg("renamed")
+        .arg("--max-depth")
+        .arg("1")
+        .arg("--history-file")
+        .arg(dir.path().join("history.json"));
+
+    cmd.assert().success();
+
+    assert!(dir.path().join("renamed_1.txt").exists());
+    assert!(file2.exists());
+    assert!(!file1.exists());
+}

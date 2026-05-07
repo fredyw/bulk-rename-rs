@@ -143,3 +143,22 @@ fn bulk_rename_include_exclude() {
 
     fs::remove_dir_all(tmp_path).unwrap();
 }
+
+#[test]
+fn bulk_rename_max_depth() {
+    let tmp_path = Path::new("tmp_depth");
+    fs::create_dir_all("tmp_depth/sub").unwrap();
+    File::create("tmp_depth/root.txt").unwrap();
+    File::create("tmp_depth/sub/nested.txt").unwrap();
+
+    let bulk_rename = BulkRename::new(tmp_path, r"(.*)\.txt", r"renamed_$1.txt")
+        .unwrap()
+        .with_max_depth(Some(1));
+    bulk_rename.bulk_rename(NoOpCallback::new());
+
+    assert!(Path::new("tmp_depth/renamed_root.txt").exists());
+    assert!(Path::new("tmp_depth/sub/nested.txt").exists());
+    assert!(!Path::new("tmp_depth/root.txt").exists());
+
+    fs::remove_dir_all(tmp_path).unwrap();
+}

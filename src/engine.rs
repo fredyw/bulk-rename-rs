@@ -27,6 +27,8 @@ pub struct BulkRename<'a> {
     include_patterns: Vec<Regex>,
     /// The patterns to exclude.
     exclude_patterns: Vec<Regex>,
+    /// The maximum depth for recursion.
+    max_depth: Option<usize>,
 }
 
 impl<'a> BulkRename<'a> {
@@ -44,6 +46,7 @@ impl<'a> BulkRename<'a> {
             extensions: HashSet::new(),
             include_patterns: Vec::new(),
             exclude_patterns: Vec::new(),
+            max_depth: None,
         })
     }
 
@@ -88,6 +91,12 @@ impl<'a> BulkRename<'a> {
         Ok(self)
     }
 
+    /// Sets the maximum depth for recursion.
+    pub fn with_max_depth(mut self, depth: Option<usize>) -> Self {
+        self.max_depth = depth;
+        self
+    }
+
     /// Executes a function `f` for any files that match the specified regex.
     ///
     /// The function `f` is called with the original path and the calculated new path.
@@ -97,7 +106,11 @@ impl<'a> BulkRename<'a> {
     where
         F: Fn(&Path, &Path) + Sync + Send,
     {
-        WalkDir::new(self.dir)
+        let mut walker = WalkDir::new(self.dir);
+        if let Some(depth) = self.max_depth {
+            walker = walker.max_depth(depth);
+        }
+        walker
             .into_iter()
             .filter_map(|entry| entry.ok())
             .filter(|entry| entry.file_type().is_file())
@@ -153,7 +166,11 @@ impl<'a> BulkRename<'a> {
     where
         F: FnMut(&Path, &Path),
     {
-        WalkDir::new(self.dir)
+        let mut walker = WalkDir::new(self.dir);
+        if let Some(depth) = self.max_depth {
+            walker = walker.max_depth(depth);
+        }
+        walker
             .into_iter()
             .filter_map(|entry| entry.ok())
             .filter(|entry| entry.file_type().is_file())

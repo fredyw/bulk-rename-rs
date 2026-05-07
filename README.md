@@ -36,6 +36,7 @@ Options:
   -e, --ext <EXT>                  Filter files by extension (comma-separated)
       --include <INCLUDE>          Include only files matching these patterns (comma-separated)
       --exclude <EXCLUDE>          Exclude files matching these patterns (comma-separated)
+      --max-depth <MAX_DEPTH>      Set the maximum depth for recursion (1 for current directory only)
   -c, --collision <STRATEGY>       Set the collision strategy [default: skip] [possible values: skip, overwrite, suffix]
       --undo                       Undo the previous rename operation
       --history-file <PATH>        Set the history file path [default: .bmv-undo.json]
