@@ -32,7 +32,7 @@ struct Args {
     quiet: bool,
 
     /// Set the collision strategy.
-    #[arg(short = 'c', long, default_value = "skip", value_parser = ["skip", "overwrite", "suffix"])]
+    #[arg(short = 'c', long, default_value = "skip")]
     collision: CollisionStrategy,
 
     /// Undo the previous rename operation using the history file.
