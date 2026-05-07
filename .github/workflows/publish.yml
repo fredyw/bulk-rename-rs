@@ -24,7 +24,7 @@ jobs:
         run: |
           VERSION=$(grep '^version =' Cargo.toml | cut -d '"' -f 2)
           echo "Checking if bulk-rename-rs version $VERSION is already on crates.io..."
-          if curl -sL -H "User-Agent: brnm-ci (github.com/fredyw/bulk-rename-rs)" https://crates.io/api/v1/crates/bulk-rename-rs | grep -q "\"num\":\"$VERSION\""; then
+          if curl -sL -H "User-Agent: bren-ci (github.com/fredyw/bulk-rename-rs)" https://crates.io/api/v1/crates/bulk-rename-rs | grep -q "\"num\":\"$VERSION\""; then
             echo "Version $VERSION already exists on crates.io. Skipping publish step."
             echo "exists=true" >> $GITHUB_OUTPUT
           else
@@ -45,16 +45,16 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            artifact_name: brnm-linux-x86_64
-            binary_name: brnm
+            artifact_name: bren-linux-x86_64
+            binary_name: bren
           - os: macos-latest
             target: aarch64-apple-darwin
-            artifact_name: brnm-macos-arm64
-            binary_name: brnm
+            artifact_name: bren-macos-arm64
+            binary_name: bren
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            artifact_name: brnm-windows-x86_64.exe
-            binary_name: brnm.exe
+            artifact_name: bren-windows-x86_64.exe
+            binary_name: bren.exe
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout repository
