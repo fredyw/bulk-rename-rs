@@ -80,3 +80,21 @@ fn regex_is_invalid() {
     let bulk_rename = BulkRename::new(Path::new("."), r"(\d+", "bar");
     assert!(matches!(bulk_rename.unwrap_err(), Error::RegexError(_)));
 }
+
+#[test]
+fn bulk_rename_ignore_case() {
+    let tmp_path = Path::new("tmp_case");
+    fs::create_dir_all(tmp_path).unwrap();
+    File::create("tmp_case/TEST.txt").unwrap();
+
+    let bulk_rename = BulkRename::new(tmp_path, r"test", "renamed")
+        .unwrap()
+        .with_case_insensitive(true)
+        .unwrap();
+    bulk_rename.bulk_rename(NoOpCallback::new());
+
+    assert!(Path::new("tmp_case/renamed.txt").exists());
+    assert!(!Path::new("tmp_case/TEST.txt").exists());
+
+    fs::remove_dir_all(tmp_path).unwrap();
+}

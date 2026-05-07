@@ -44,6 +44,17 @@ impl<'a> BulkRename<'a> {
         self
     }
 
+    /// Sets whether the regex matching should be case-insensitive.
+    pub fn with_case_insensitive(mut self, ignore_case: bool) -> Result<Self, Error> {
+        if ignore_case {
+            let pattern = self.regex.as_str();
+            self.regex = regex::RegexBuilder::new(pattern)
+                .case_insensitive(true)
+                .build()?;
+        }
+        Ok(self)
+    }
+
     /// Executes a function `f` for any files that match the specified regex.
     ///
     /// The function `f` is called with the original path and the calculated new path.

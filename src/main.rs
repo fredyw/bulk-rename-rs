@@ -47,6 +47,10 @@ struct Args {
     /// Prompt for confirmation before each rename.
     #[arg(short = 'i', long, default_value_t = false)]
     interactive: bool,
+
+    /// Use case-insensitive matching.
+    #[arg(short = 'I', long, default_value_t = false)]
+    ignore_case: bool,
 }
 
 /// A callback implementation for the CLI.
@@ -96,7 +100,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let replacement = args.replacement.as_deref().unwrap_or("");
 
     let bulk_rename = BulkRename::new(path, regex, replacement)?;
-    let bulk_rename = bulk_rename.with_collision_strategy(args.collision);
+    let bulk_rename = bulk_rename
+        .with_collision_strategy(args.collision)
+        .with_case_insensitive(args.ignore_case)?;
 
     if args.dry_run {
         let targets = Mutex::new(HashSet::new());
