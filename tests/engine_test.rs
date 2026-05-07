@@ -17,7 +17,7 @@ fn bulk_rename_has_match() {
     File::create("tmp1/a/b/foo_345.txt").unwrap();
 
     let bulk_rename = BulkRename::new(tmp_path, r"(test)_(\d+).txt", r"${2}_${1}.txt").unwrap();
-    bulk_rename.bulk_rename(NoOpCallback::new());
+    bulk_rename.execute(NoOpCallback::new());
 
     assert!(Path::new("tmp1/foo_123.txt").exists());
     assert!(Path::new("tmp1/a/foo_234.txt").exists());
@@ -43,7 +43,7 @@ fn bulk_rename_no_match() {
     File::create("tmp2/a/b/test_345.txt").unwrap();
 
     let bulk_rename = BulkRename::new(tmp_path, r"foobar.txt", r"${2}_${1}.txt").unwrap();
-    bulk_rename.bulk_rename(NoOpCallback::new());
+    bulk_rename.execute(NoOpCallback::new());
 
     assert!(Path::new("tmp2/test_123.txt").exists());
     assert!(Path::new("tmp2/a/test_234.txt").exists());
@@ -60,7 +60,7 @@ fn bulk_rename_unicode_chars() {
     File::create("tmp3/日本.txt").unwrap();
 
     let bulk_rename = BulkRename::new(tmp_path, r"中文.txt", r"英语.txt").unwrap();
-    bulk_rename.bulk_rename(NoOpCallback::new());
+    bulk_rename.execute(NoOpCallback::new());
 
     assert!(Path::new("tmp3/日本.txt").exists());
     assert!(!Path::new("tmp3/中文.txt").exists());
@@ -91,7 +91,7 @@ fn bulk_rename_ignore_case() {
         .unwrap()
         .with_case_insensitive(true)
         .unwrap();
-    bulk_rename.bulk_rename(NoOpCallback::new());
+    bulk_rename.execute(NoOpCallback::new());
 
     assert!(Path::new("tmp_case/renamed.txt").exists());
     assert!(!Path::new("tmp_case/TEST.txt").exists());
@@ -112,7 +112,7 @@ fn bulk_rename_extension_filter() {
     let bulk_rename = BulkRename::new(tmp_path, r"test", "renamed")
         .unwrap()
         .with_extensions(exts);
-    bulk_rename.bulk_rename(NoOpCallback::new());
+    bulk_rename.execute(NoOpCallback::new());
 
     assert!(Path::new("tmp_ext/renamed.txt").exists());
     assert!(Path::new("tmp_ext/test.jpg").exists());
@@ -135,7 +135,7 @@ fn bulk_rename_include_exclude() {
         .unwrap()
         .with_exclude_patterns(vec!["exclude.*".to_string()])
         .unwrap();
-    bulk_rename.bulk_rename(NoOpCallback::new());
+    bulk_rename.execute(NoOpCallback::new());
 
     assert!(Path::new("tmp_inc_exc/renamed_include.txt").exists());
     assert!(Path::new("tmp_inc_exc/exclude_me.txt").exists());
@@ -154,7 +154,7 @@ fn bulk_rename_max_depth() {
     let bulk_rename = BulkRename::new(tmp_path, r"(.*)\.txt", r"renamed_$1.txt")
         .unwrap()
         .with_max_depth(Some(1));
-    bulk_rename.bulk_rename(NoOpCallback::new());
+    bulk_rename.execute(NoOpCallback::new());
 
     assert!(Path::new("tmp_depth/renamed_root.txt").exists());
     assert!(Path::new("tmp_depth/sub/nested.txt").exists());
@@ -174,7 +174,7 @@ fn bulk_rename_counter() {
         .unwrap()
         .with_counter_start(10);
     // Use sequential to ensure deterministic order for test assertion
-    bulk_rename.bulk_rename_fn_seq(|old, new| {
+    bulk_rename.run_seq(|old, new| {
         fs::rename(old, new).unwrap();
     });
 
@@ -194,7 +194,7 @@ fn bulk_rename_counter_padding() {
 
     // Let's do real renames.
     let mut names = Vec::new();
-    bulk_rename.bulk_rename_fn_seq(|_, new| {
+    bulk_rename.run_seq(|_, new| {
         names.push(new.file_name().unwrap().to_string_lossy().to_string());
     });
 

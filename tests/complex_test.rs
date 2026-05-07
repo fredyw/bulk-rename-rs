@@ -29,7 +29,7 @@ fn test_complex_recursive_rename() {
     File::create(root.join("subdir3/other.dat")).unwrap();
 
     let bulk_rename = BulkRename::new(root, r"file(\d)\.txt", r"renamed_$1.txt").unwrap();
-    bulk_rename.bulk_rename(NoOpCallback::new());
+    bulk_rename.execute(NoOpCallback::new());
 
     // Check results
     assert!(root.join("renamed_1.txt").exists());
@@ -52,7 +52,7 @@ fn test_mixed_matches() {
     File::create(root.join("match2.txt")).unwrap();
 
     let bulk_rename = BulkRename::new(root, r"match(\d)\.txt", r"ok_$1.txt").unwrap();
-    bulk_rename.bulk_rename(NoOpCallback::new());
+    bulk_rename.execute(NoOpCallback::new());
 
     assert!(root.join("ok_1.txt").exists());
     assert!(root.join("ok_2.txt").exists());

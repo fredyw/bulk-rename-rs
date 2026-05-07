@@ -17,7 +17,7 @@ fn collision_skip() {
     let bulk_rename = BulkRename::new(tmp_path, r"file\d.txt", "target.txt")
         .unwrap()
         .with_collision_strategy(CollisionStrategy::Skip);
-    bulk_rename.bulk_rename(NoOpCallback::new());
+    bulk_rename.execute(NoOpCallback::new());
 
     // Both should be skipped because target.txt already exists
     assert!(Path::new("tmp_skip/file1.txt").exists());
@@ -40,7 +40,7 @@ fn collision_overwrite() {
     let bulk_rename = BulkRename::new(tmp_path, r"file1.txt", "target.txt")
         .unwrap()
         .with_collision_strategy(CollisionStrategy::Overwrite);
-    bulk_rename.bulk_rename(NoOpCallback::new());
+    bulk_rename.execute(NoOpCallback::new());
 
     // file1.txt should be gone, target.txt should have new content
     assert!(!Path::new("tmp_overwrite/file1.txt").exists());
@@ -64,7 +64,7 @@ fn collision_suffix() {
     let bulk_rename = BulkRename::new(tmp_path, r"file(\d).txt", "target.txt")
         .unwrap()
         .with_collision_strategy(CollisionStrategy::Suffix);
-    bulk_rename.bulk_rename(NoOpCallback::new());
+    bulk_rename.execute(NoOpCallback::new());
 
     // One should be target (1).txt, another target (2).txt (order not guaranteed due to parallelism)
     assert!(Path::new("tmp_suffix/target.txt").exists());
@@ -85,7 +85,7 @@ fn internal_collision_skip() {
     let bulk_rename = BulkRename::new(tmp_path, r"file\d.txt", "target.txt")
         .unwrap()
         .with_collision_strategy(CollisionStrategy::Skip);
-    bulk_rename.bulk_rename(NoOpCallback::new());
+    bulk_rename.execute(NoOpCallback::new());
 
     assert!(Path::new("tmp_internal_skip/target.txt").exists());
     // Exactly one of file1 or file2 should still exist

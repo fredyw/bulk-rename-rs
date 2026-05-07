@@ -112,7 +112,7 @@ impl<'a> BulkRename<'a> {
     /// The function `f` is called with the original path and the calculated new path.
     /// It will not be called if the file name remains unchanged after replacement.
     /// This operation is performed in parallel across multiple threads.
-    pub fn bulk_rename_fn<F>(&self, f: F)
+    pub fn run<F>(&self, f: F)
     where
         F: Fn(&Path, &Path) + Sync + Send,
     {
@@ -197,8 +197,8 @@ impl<'a> BulkRename<'a> {
         }
     }
 
-    /// Sequential version of `bulk_rename_fn`.
-    pub fn bulk_rename_fn_seq<F>(&self, mut f: F)
+    /// Sequential version of `run`.
+    pub fn run_seq<F>(&self, mut f: F)
     where
         F: FnMut(&Path, &Path),
     {
@@ -211,9 +211,9 @@ impl<'a> BulkRename<'a> {
     /// Performs the bulk rename operation, notifying the provided `callback` of each outcome.
     ///
     /// Files are renamed in place. This operation is performed in parallel across multiple threads.
-    pub fn bulk_rename(&self, callback: impl Callback) {
+    pub fn execute(&self, callback: impl Callback) {
         let targets = Mutex::new(HashSet::new());
-        self.bulk_rename_fn(|old_path, new_path| {
+        self.run(|old_path, new_path| {
             let final_path = match self.resolve_collision(old_path, new_path, &targets) {
                 Some(path) => path,
                 None => return, // Skip

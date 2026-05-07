@@ -20,7 +20,7 @@ fn test_history_collection() {
     let history_records = Mutex::new(Vec::new());
     let callback = HistoryCallback::new(NoOpCallback::new(), &history_records);
 
-    bulk_rename.bulk_rename(callback);
+    bulk_rename.execute(callback);
 
     let records = history_records.into_inner().unwrap();
     assert_eq!(records.len(), 2);
@@ -50,7 +50,7 @@ fn test_bulk_rename_undo() {
     let callback = HistoryCallback::new(NoOpCallback::new(), &history_records);
 
     // Perform rename
-    bulk_rename.bulk_rename(callback);
+    bulk_rename.execute(callback);
 
     let renamed1 = root.join("renamed_1.txt");
     let renamed2 = root.join("renamed_2.txt");
@@ -91,7 +91,7 @@ fn test_undo_with_collision_suffix() {
     let history_records = Mutex::new(Vec::new());
     let callback = HistoryCallback::new(NoOpCallback::new(), &history_records);
 
-    bulk_rename.bulk_rename(callback);
+    bulk_rename.execute(callback);
 
     let target = root.join("target.txt");
     let target_suffix = root.join("target (1).txt");

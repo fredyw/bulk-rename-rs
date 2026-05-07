@@ -131,7 +131,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
 
     if args.dry_run {
         let targets = Mutex::new(HashSet::new());
-        bulk_rename.bulk_rename_fn(|old_path, new_path| {
+        bulk_rename.run(|old_path, new_path| {
             if let Some(final_path) = bulk_rename.resolve_collision(old_path, new_path, &targets) {
                 println!(
                     "Dry-run: {} --> {}",
@@ -147,7 +147,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         let history = Mutex::new(Vec::new());
         let callback = HistoryCallback::new(CliCallback::new(args.quiet), &history);
 
-        bulk_rename.bulk_rename_fn_seq(|old_path, new_path| {
+        bulk_rename.run_seq(|old_path, new_path| {
             if let Some(final_path) = bulk_rename.resolve_collision(old_path, new_path, &targets) {
                 if confirm(old_path, &final_path) {
                     match std::fs::rename(old_path, &final_path) {
@@ -162,7 +162,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         let history = Mutex::new(Vec::new());
         let callback = HistoryCallback::new(CliCallback::new(args.quiet), &history);
-        bulk_rename.bulk_rename(callback);
+        bulk_rename.execute(callback);
 
         save_history(&args.history_file, history.into_inner().unwrap())?;
     }

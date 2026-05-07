@@ -86,16 +86,16 @@ impl Callback for SimpleCallback {
         );
     }
 }
+fn main() {
+    let bulk_rename = BulkRename::new(Path::new("./files"), r"old_(.*)\.txt", r"new_$1.txt").unwrap();
+    
+    // Execute renames in parallel with a callback
+    bulk_rename.execute(SimpleCallback::new());
 
-let dir = Path::new("tmp");
-match BulkRename::new(dir, r"(test)_(\d+).txt", r"${2}_${1}.txt") {
-    Ok(br) => {
-        let br = br.with_collision_strategy(CollisionStrategy::Suffix);
-        br.bulk_rename(SimpleCallback::new());
-    }
-    Err(e) => {
-        eprintln!("Error: {:?}", e);
-    }
+    // Or run with a custom closure
+    bulk_rename.run(|old, new| {
+        println!("Renaming {} to {}", old.display(), new.display());
+    });
 }
 ```
 
