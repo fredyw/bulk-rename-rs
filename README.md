@@ -48,6 +48,11 @@ Options:
 > **Dynamic Variables:** You can use `{i}` for an auto-incrementing counter in the replacement string. 
 > Use `{i:N}` (e.g., `{i:3}`) to specify padding with leading zeros (e.g., `001`, `002`).
 > **Note:** When `{i}` is used, files are processed in alphabetical order to ensure deterministic counter assignment.
+>
+> [!NOTE]
+> **Execution Mode:** While `bmv` always plans renames sequentially (to ensure deterministic counters and sorting), the actual **renaming operations** happen in parallel by default.
+>
+> It only switches to **sequential renaming** when `--interactive` is used, to allow for step-by-step confirmation.
 
 > [!NOTE]
 > **Precedence:** `exclude` patterns have the highest priority. If a file matches both an `include` and an `exclude` pattern, it will be **excluded**.

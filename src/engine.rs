@@ -116,37 +116,35 @@ impl<'a> BulkRename<'a> {
     where
         F: Fn(&Path, &Path) + Sync + Send,
     {
-        let is_dynamic = self.replacement.contains("{i");
+        let plan = self.generate_plan();
+        plan.into_par_iter().for_each(|(old, new)| {
+            f(&old, &new);
+        });
+    }
 
-        if is_dynamic {
-            // Collect and sort for deterministic counter assignment
-            let mut entries: Vec<_> = WalkDir::new(self.dir)
-                .into_iter()
-                .filter_map(|entry| entry.ok())
-                .filter(|entry| entry.file_type().is_file())
-                .filter(|entry| self.filter_entry(entry))
-                .collect();
-
-            entries.sort_by(|a, b| a.path().cmp(b.path()));
-
-            entries.into_iter().for_each(|entry| {
-                self.process_entry(entry.path(), &f);
-            });
-        } else {
-            let mut walker = WalkDir::new(self.dir);
-            if let Some(depth) = self.max_depth {
-                walker = walker.max_depth(depth);
-            }
-            walker
-                .into_iter()
-                .filter_map(|entry| entry.ok())
-                .filter(|entry| entry.file_type().is_file())
-                .filter(|entry| self.filter_entry(entry))
-                .par_bridge()
-                .for_each(|entry| {
-                    self.process_entry(entry.path(), |old, new| f(old, new));
-                });
+    fn generate_plan(&self) -> Vec<(PathBuf, PathBuf)> {
+        let mut walker = WalkDir::new(self.dir);
+        if let Some(depth) = self.max_depth {
+            walker = walker.max_depth(depth);
         }
+
+        let mut entries: Vec<_> = walker
+            .into_iter()
+            .filter_map(|entry| entry.ok())
+            .filter(|entry| entry.file_type().is_file())
+            .filter(|entry| self.filter_entry(entry))
+            .collect();
+
+        // Always sort for predictability
+        entries.sort_by(|a, b| a.path().cmp(b.path()));
+
+        let mut plan = Vec::new();
+        for entry in entries {
+            self.process_entry(entry.path(), |old, new| {
+                plan.push((old.to_path_buf(), new.to_path_buf()));
+            });
+        }
+        plan
     }
 
     fn filter_entry(&self, entry: &walkdir::DirEntry) -> bool {
@@ -204,20 +202,10 @@ impl<'a> BulkRename<'a> {
     where
         F: FnMut(&Path, &Path),
     {
-        let mut entries: Vec<_> = WalkDir::new(self.dir)
-            .into_iter()
-            .filter_map(|entry| entry.ok())
-            .filter(|entry| entry.file_type().is_file())
-            .filter(|entry| self.filter_entry(entry))
-            .collect();
-
-        if self.replacement.contains("{i") {
-            entries.sort_by(|a, b| a.path().cmp(b.path()));
+        let plan = self.generate_plan();
+        for (old, new) in plan {
+            f(&old, &new);
         }
-
-        entries.into_iter().for_each(|entry| {
-            self.process_entry(entry.path(), |old, new| f(old, new));
-        });
     }
 
     /// Performs the bulk rename operation, notifying the provided `callback` of each outcome.

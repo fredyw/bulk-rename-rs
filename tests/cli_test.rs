@@ -402,3 +402,30 @@ fn test_cli_max_depth() {
     assert!(file2.exists());
     assert!(!file1.exists());
 }
+
+#[test]
+fn test_cli_counter() {
+    let dir = tempdir().unwrap();
+    let file1 = dir.path().join("a.txt");
+    let file2 = dir.path().join("b.txt");
+    File::create(&file1).unwrap();
+    File::create(&file2).unwrap();
+
+    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    cmd.arg("-f")
+        .arg(dir.path())
+        .arg("-r")
+        .arg("(.*)\\.txt")
+        .arg("-p")
+        .arg("file_{i:3}.txt")
+        .arg("--counter-start")
+        .arg("5")
+        .arg("--history-file")
+        .arg(dir.path().join("history.json"));
+
+    cmd.assert().success();
+
+    // With sorting, a.txt should be file_005.txt and b.txt should be file_006.txt
+    assert!(dir.path().join("file_005.txt").exists());
+    assert!(dir.path().join("file_006.txt").exists());
+}
