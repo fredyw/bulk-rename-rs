@@ -1,8 +1,6 @@
 # bulk-rename-rs
 
-<p align="center">
-  <img src="assets/logo.png" alt="bulk-rename-rs Logo" width="400">
-</p>
+<img src="assets/logo.png" alt="bulk-rename-rs Logo" width="280">
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![CI](https://github.com/fredyw/bulk-rename-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/fredyw/bulk-rename-rs/actions/workflows/ci.yml)
