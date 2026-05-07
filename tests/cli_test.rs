@@ -245,7 +245,9 @@ fn test_cli_undo_no_history() {
 
     cmd.assert()
         .failure()
-        .stderr(predicate::str::contains("No such file or directory"));
+        .stderr(predicate::str::contains("No such file or directory").or(
+            predicate::str::contains("The system cannot find the file specified"),
+        ));
 }
 #[test]
 fn test_cli_interactive_yes() {
