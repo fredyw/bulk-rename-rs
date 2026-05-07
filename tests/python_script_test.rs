@@ -87,11 +87,9 @@ fn test_python_wrong_type() {
         .arg("--python-script")
         .arg("result = 123");
 
-    cmd.assert()
-        .success()
-        .stderr(predicates::str::contains(
-            "The 'result' variable must be a string, but found type 'int'.",
-        ));
+    cmd.assert().success().stderr(predicates::str::contains(
+        "The 'result' variable must be a string, but found type 'int'.",
+    ));
 }
 
 #[test]
