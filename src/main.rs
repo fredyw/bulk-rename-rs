@@ -2,7 +2,7 @@
 extern crate bmv;
 extern crate clap;
 
-use bmv::{BulkRename, Callback, CollisionStrategy, Error, HistoryCallback, RenameHistory};
+use bmv::{BulkRename, Callback, CollisionStrategy, HistoryCallback, RenameHistory};
 use clap::Parser;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -76,88 +76,55 @@ impl Callback for CliCallback {
     }
 }
 
-fn run() {
+fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     if args.undo {
-        match std::fs::read_to_string(&args.history_file) {
-            Ok(content) => match serde_json::from_str::<RenameHistory>(&content) {
-                Ok(history) => {
-                    BulkRename::undo(&history, CliCallback::new(args.quiet));
-                }
-                Err(e) => {
-                    eprintln!("Error: Failed to parse history file: {}", e);
-                }
-            },
-            Err(e) => {
-                eprintln!("Error: Failed to read history file: {}", e);
-            }
-        }
-        return;
+        let content = std::fs::read_to_string(&args.history_file)?;
+        let history = serde_json::from_str::<RenameHistory>(&content)?;
+        BulkRename::undo(&history, CliCallback::new(args.quiet));
+        return Ok(());
     }
 
     let path = args.dir.as_path();
     let regex = args.regex.as_deref().unwrap_or("");
     let replacement = args.replacement.as_deref().unwrap_or("");
 
-    let bulk_rename = BulkRename::new(path, regex, replacement);
-    match bulk_rename {
-        Ok(bulk_rename) => {
-            let bulk_rename = bulk_rename.with_collision_strategy(args.collision);
-            if args.dry_run {
-                let targets = Mutex::new(HashSet::new());
-                bulk_rename.bulk_rename_fn(|old_path, new_path| {
-                    if let Some(final_path) =
-                        bulk_rename.resolve_collision(old_path, new_path, &targets)
-                    {
-                        println!(
-                            "Dry-run: {} --> {}",
-                            old_path.display(),
-                            final_path.display()
-                        );
-                    } else {
-                        println!("Dry-run: {} (skipped due to collision)", old_path.display());
-                    }
-                })
-            } else {
-                let history = Mutex::new(Vec::new());
-                let callback = HistoryCallback::new(CliCallback::new(args.quiet), &history);
-                bulk_rename.bulk_rename(callback);
+    let bulk_rename = BulkRename::new(path, regex, replacement)?;
+    let bulk_rename = bulk_rename.with_collision_strategy(args.collision);
 
-                let records = history.into_inner().unwrap();
-                if !records.is_empty() {
-                    let history = RenameHistory { records };
-                    match serde_json::to_string_pretty(&history) {
-                        Ok(json) => {
-                            if let Err(e) = std::fs::write(&args.history_file, json) {
-                                eprintln!("Error: Failed to save history: {}", e);
-                            }
-                        }
-                        Err(e) => {
-                            eprintln!("Error: Failed to serialize history: {}", e);
-                        }
-                    }
-                }
+    if args.dry_run {
+        let targets = Mutex::new(HashSet::new());
+        bulk_rename.bulk_rename_fn(|old_path, new_path| {
+            if let Some(final_path) = bulk_rename.resolve_collision(old_path, new_path, &targets) {
+                println!(
+                    "Dry-run: {} --> {}",
+                    old_path.display(),
+                    final_path.display()
+                );
+            } else {
+                println!("Dry-run: {} (skipped due to collision)", old_path.display());
             }
+        });
+    } else {
+        let history = Mutex::new(Vec::new());
+        let callback = HistoryCallback::new(CliCallback::new(args.quiet), &history);
+        bulk_rename.bulk_rename(callback);
+
+        let records = history.into_inner().unwrap();
+        if !records.is_empty() {
+            let history = RenameHistory { records };
+            let json = serde_json::to_string_pretty(&history)?;
+            std::fs::write(&args.history_file, json)?;
         }
-        Err(error) => match error {
-            Error::NotDirError => {
-                eprintln!("Error: {} is not a directory", path.display())
-            }
-            Error::RegexError(error) => {
-                eprintln!(
-                    "Error: {} is not a valid regex: '{}'",
-                    args.regex.unwrap_or_default(),
-                    error
-                )
-            }
-            Error::IoError { path, source } => {
-                eprintln!("Error: I/O error at {}: {}", path.display(), source)
-            }
-        },
     }
+
+    Ok(())
 }
 
 fn main() {
-    run();
+    if let Err(e) = run() {
+        eprintln!("Error: {}", e);
+        std::process::exit(1);
+    }
 }

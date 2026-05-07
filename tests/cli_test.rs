@@ -94,8 +94,8 @@ fn test_cli_invalid_regex() {
         .arg(dir.path().join("history.json"));
 
     cmd.assert()
-        .success() // bmv seems to return success even on regex error in run(), just prints to stderr
-        .stderr(predicate::str::contains("is not a valid regex"));
+        .failure()
+        .stderr(predicate::str::contains("invalid regex"));
 }
 
 #[test]
@@ -111,8 +111,8 @@ fn test_cli_not_a_directory() {
         .arg("history.json"); // This one is tricky as dir is not defined here, but the command is expected to fail anyway due to not a dir.
 
     cmd.assert()
-        .success()
-        .stderr(predicate::str::contains("is not a directory"));
+        .failure()
+        .stderr(predicate::str::contains("path is not a directory"));
 }
 
 #[test]
@@ -231,4 +231,19 @@ fn test_cli_collision_suffix() {
     assert!(!file1.exists());
     assert!(existing.exists());
     assert!(dir.path().join("file_1 (1).txt").exists());
+}
+
+#[test]
+fn test_cli_undo_no_history() {
+    let dir = tempdir().unwrap();
+    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    cmd.arg("-f")
+        .arg(dir.path())
+        .arg("--undo")
+        .arg("--history-file")
+        .arg(dir.path().join("non_existent_history.json"));
+
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("No such file or directory"));
 }
