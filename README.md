@@ -43,6 +43,7 @@ Options:
       --counter-start <START>      Set the starting value for the counter {i} [default: 1]
   -h, --help                       Print help
   -V, --version                    Print version
+```
 
 > [!NOTE]
 > **Dynamic Variables:** You can use `{i}` for an auto-incrementing counter in the replacement string. 
@@ -56,7 +57,6 @@ Options:
 
 > [!NOTE]
 > **Precedence:** `exclude` patterns have the highest priority. If a file matches both an `include` and an `exclude` pattern, it will be **excluded**.
-```
 
 #### API
 
