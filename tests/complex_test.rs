@@ -1,6 +1,6 @@
-extern crate bmv;
+extern crate bulk_rename_rs;
 
-use bmv::{BulkRename, NoOpCallback};
+use bulk_rename_rs::{BulkRename, NoOpCallback};
 use std::fs;
 use std::fs::File;
 use tempfile::tempdir;

@@ -1,5 +1,5 @@
 #!/bin/bash
-# release.sh - Automates the release process for bmv
+# release.sh - Automates the release process for bulk-rename-rs
 
 set -e
 

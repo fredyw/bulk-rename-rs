@@ -1,6 +1,6 @@
-extern crate bmv;
+extern crate bulk_rename_rs;
 
-use bmv::{BulkRename, CollisionStrategy, NoOpCallback};
+use bulk_rename_rs::{BulkRename, CollisionStrategy, NoOpCallback};
 use std::fs;
 use std::fs::File;
 use std::path::Path;

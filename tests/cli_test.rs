@@ -11,7 +11,7 @@ fn test_cli_basic_rename() {
     File::create(&file1).unwrap();
     File::create(&file2).unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")
@@ -38,7 +38,7 @@ fn test_cli_dry_run() {
     let file1 = dir.path().join("test_1.txt");
     File::create(&file1).unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")
@@ -63,7 +63,7 @@ fn test_cli_quiet_mode() {
     let file1 = dir.path().join("test_1.txt");
     File::create(&file1).unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")
@@ -83,7 +83,7 @@ fn test_cli_quiet_mode() {
 fn test_cli_invalid_regex() {
     let dir = tempdir().unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")
@@ -100,7 +100,7 @@ fn test_cli_invalid_regex() {
 
 #[test]
 fn test_cli_not_a_directory() {
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg("non_existent_directory_12345")
         .arg("-r")
@@ -123,7 +123,7 @@ fn test_cli_undo() {
     let history_file = dir.path().join("history.json");
 
     // 1. Rename
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")
@@ -139,7 +139,7 @@ fn test_cli_undo() {
     assert!(history_file.exists());
 
     // 2. Undo
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("--undo")
@@ -162,7 +162,7 @@ fn test_cli_collision_skip() {
     File::create(&file1).unwrap();
     File::create(&existing).unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")
@@ -188,7 +188,7 @@ fn test_cli_collision_overwrite() {
     File::create(&file1).unwrap();
     std::fs::write(&existing, "old content").unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")
@@ -214,7 +214,7 @@ fn test_cli_collision_suffix() {
     File::create(&file1).unwrap();
     File::create(&existing).unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")
@@ -236,7 +236,7 @@ fn test_cli_collision_suffix() {
 #[test]
 fn test_cli_undo_no_history() {
     let dir = tempdir().unwrap();
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("--undo")
@@ -255,7 +255,7 @@ fn test_cli_interactive_yes() {
     let file1 = dir.path().join("test_1.txt");
     File::create(&file1).unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")
@@ -279,7 +279,7 @@ fn test_cli_interactive_no() {
     let file1 = dir.path().join("test_1.txt");
     File::create(&file1).unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")
@@ -303,7 +303,7 @@ fn test_cli_ignore_case() {
     let file1 = dir.path().join("TEST_1.txt");
     File::create(&file1).unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")
@@ -328,7 +328,7 @@ fn test_cli_extension_filter() {
     File::create(&file1).unwrap();
     File::create(&file2).unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")
@@ -355,7 +355,7 @@ fn test_cli_include_exclude() {
     File::create(&file1).unwrap();
     File::create(&file2).unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")
@@ -386,7 +386,7 @@ fn test_cli_max_depth() {
     File::create(&file1).unwrap();
     File::create(&file2).unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")
@@ -413,7 +413,7 @@ fn test_cli_counter() {
     File::create(&file1).unwrap();
     File::create(&file2).unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")
@@ -440,7 +440,7 @@ fn test_cli_rename_dirs() {
     let file = sub.join("file.txt");
     std::fs::File::create(&file).unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")
@@ -467,7 +467,7 @@ fn test_cli_rename_all() {
     let file = sub.join("test.txt");
     std::fs::File::create(&file).unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")

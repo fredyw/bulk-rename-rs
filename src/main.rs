@@ -1,8 +1,8 @@
-//! Main entry point for the `bmv` CLI tool.
-extern crate bmv;
+//! Main entry point for the `brnm` CLI tool.
+extern crate bulk_rename_rs;
 extern crate clap;
 
-use bmv::{
+use bulk_rename_rs::{
     BulkRename, Callback, CollisionStrategy, HistoryCallback, RenameHistory, SymlinkStrategy,
     TransactionStrategy,
 };
@@ -44,7 +44,7 @@ struct Args {
     undo: bool,
 
     /// Set the history file path for undo/rollback.
-    #[arg(long, default_value = ".bmv-undo.json")]
+    #[arg(long, default_value = ".brnm-undo.json")]
     history_file: PathBuf,
 
     /// Prompt for confirmation before each rename.
@@ -234,7 +234,7 @@ fn confirm(old_path: &Path, new_path: &Path) -> bool {
 
 fn save_history(
     history_file: &Path,
-    records: Vec<bmv::models::RenameRecord>,
+    records: Vec<bulk_rename_rs::models::RenameRecord>,
 ) -> Result<(), Box<dyn std::error::Error>> {
     if !records.is_empty() {
         let history = RenameHistory { records };

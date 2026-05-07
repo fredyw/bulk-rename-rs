@@ -12,7 +12,7 @@ fn test_cli_symlink_ignore() {
     let link = dir.path().join("link.txt");
     std::os::unix::fs::symlink(&file, &link).unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")
@@ -36,7 +36,7 @@ fn test_cli_symlink_rename() {
     let link = dir.path().join("link.txt");
     std::os::unix::fs::symlink(&file, &link).unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")
@@ -65,7 +65,7 @@ fn test_cli_symlink_follow() {
     let link = dir.path().join("link.txt");
     std::os::unix::fs::symlink(&file, &link).unwrap();
 
-    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    let mut cmd = Command::cargo_bin("brnm").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("-r")

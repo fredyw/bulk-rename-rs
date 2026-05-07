@@ -1,4 +1,4 @@
-use bmv::{BulkRename, CollisionStrategy, HistoryCallback, NoOpCallback, RenameHistory};
+use bulk_rename_rs::{BulkRename, CollisionStrategy, HistoryCallback, NoOpCallback, RenameHistory};
 use std::fs::File;
 use std::sync::Mutex;
 use tempfile::tempdir;

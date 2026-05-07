@@ -1,6 +1,6 @@
-extern crate bmv;
+extern crate bulk_rename_rs;
 
-use bmv::{BulkRename, Error, NoOpCallback};
+use bulk_rename_rs::{BulkRename, Error, NoOpCallback};
 use regex::Regex;
 use std::fs;
 use std::fs::File;

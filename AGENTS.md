@@ -1,6 +1,6 @@
 # Rules for AI Agents
 
-Welcome! As an AI agent working on the `bmv` repository, please adhere to the following rules and guidelines to ensure high-quality contributions.
+Welcome! As an AI agent working on the `bulk-rename-rs` repository, please adhere to the following rules and guidelines to ensure high-quality contributions.
 
 ## 1. Testing Requirements
 **Every change must be accompanied by tests.** Whether it's a new feature, a bug fix, or a refactoring effort, you must include:
@@ -32,7 +32,7 @@ Before submitting any change, ensure all tests pass:
 - **Conciseness**: Be descriptive but avoid being overly verbose. Focus on key technical decisions or rationale.
 
 ## 5. Performance & Safety
-Since `bmv` is a bulk file renaming tool:
+Since `brnm` is a bulk file renaming tool:
 - **Safety First**: Ensure that file operations are safe and handle potential conflicts (e.g., name collisions) gracefully.
 - **Parallelism**: Leverage `rayon` for efficient parallel processing of large directories.
 - **Regex Efficiency**: Be mindful of regex compilation and performance, especially when processing thousands of files.
@@ -49,4 +49,4 @@ Since `bmv` is a bulk file renaming tool:
 - `src/main.rs`: CLI entry point and argument parsing using `clap`.
 - `tests/`: Integration tests for filesystem operations and CLI logic.
 
-Thank you for contributing to `bmv`!
+Thank you for contributing to `bulk-rename-rs`!

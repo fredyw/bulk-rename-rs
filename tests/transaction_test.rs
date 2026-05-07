@@ -1,6 +1,6 @@
-extern crate bmv;
+extern crate bulk_rename_rs;
 
-use bmv::{BulkRename, CollisionStrategy, NoOpCallback, TransactionStrategy};
+use bulk_rename_rs::{BulkRename, CollisionStrategy, NoOpCallback, TransactionStrategy};
 use std::fs;
 use std::fs::File;
 use std::path::Path;
@@ -28,7 +28,7 @@ fn test_transaction_continue() {
         pub ok_count: std::sync::atomic::AtomicUsize,
         pub err_count: std::sync::atomic::AtomicUsize,
     }
-    impl bmv::Callback for &TestCallback {
+    impl bulk_rename_rs::Callback for &TestCallback {
         fn on_ok(&self, _: &Path, _: &Path) {
             self.ok_count
                 .fetch_add(1, std::sync::atomic::Ordering::SeqCst);

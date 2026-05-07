@@ -1,9 +1,13 @@
-# bmv
+# bulk-rename-rs
+
+<p align="center">
+  <img src="assets/logo.png" alt="bulk-rename-rs Logo" width="400">
+</p>
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![CI](https://github.com/fredyw/bmv/actions/workflows/ci.yml/badge.svg)](https://github.com/fredyw/bmv/actions/workflows/ci.yml)
-[![Publish](https://github.com/fredyw/bmv/actions/workflows/publish.yml/badge.svg)](https://github.com/fredyw/bmv/actions/workflows/publish.yml)
-[![Crates.io](https://img.shields.io/crates/v/bmv.svg)](https://crates.io/crates/bmv)
+[![CI](https://github.com/fredyw/bulk-rename-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/fredyw/bulk-rename-rs/actions/workflows/ci.yml)
+[![Publish](https://github.com/fredyw/bulk-rename-rs/actions/workflows/publish.yml/badge.svg)](https://github.com/fredyw/bulk-rename-rs/actions/workflows/publish.yml)
+[![Crates.io](https://img.shields.io/crates/v/bulk-rename-rs.svg)](https://crates.io/crates/bulk-rename-rs)
 
 A powerful command-line tool for bulk renaming files using regular expressions, built with Rust for speed and safety.
 
@@ -36,28 +40,28 @@ A powerful command-line tool for bulk renaming files using regular expressions, 
 **Linux & macOS:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/fredyw/bmv/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/fredyw/bulk-rename-rs/main/install.sh | bash
 ```
 
 **Windows (PowerShell):**
 
 ```powershell
-iwr -useb https://raw.githubusercontent.com/fredyw/bmv/main/install.ps1 | iex
+iwr -useb https://raw.githubusercontent.com/fredyw/bulk-rename-rs/main/install.ps1 | iex
 ```
 
 ### From crates.io
 
-If you have Rust installed, you can install `bmv` directly from [crates.io](https://crates.io/crates/bmv):
+If you have Rust installed, you can install `brnm` directly from [crates.io](https://crates.io/crates/bulk-rename-rs):
 
 ```bash
-cargo install bmv
+cargo install bulk-rename-rs
 ```
 
 ### From Source
 
 ```bash
-git clone https://github.com/fredyw/bmv.git
-cd bmv
+git clone https://github.com/fredyw/bulk-rename-rs.git
+cd bulk-rename-rs
 ./install.sh --source
 ```
 
@@ -70,25 +74,25 @@ Get started with common renaming tasks:
 ### Basic Regex Rename
 Rename all `.txt` files by adding a prefix:
 ```bash
-bmv -f . -r "(.*)\.txt" -p "prefix_$1.txt"
+brnm -f . -r "(.*)\.txt" -p "prefix_$1.txt"
 ```
 
 ### Add a Sequential Counter
 Rename files to `image_001.jpg`, `image_002.jpg`, etc.:
 ```bash
-bmv -f ./photos -r ".*\.jpg" -p "image_{i:3}.jpg"
+brnm -f ./photos -r ".*\.jpg" -p "image_{i:3}.jpg"
 ```
 
 ### Case Transformation
 Convert all filenames to uppercase:
 ```bash
-bmv -f . -r "(.*)" -p "{u:$1}"
+brnm -f . -r "(.*)" -p "{u:$1}"
 ```
 
 ### Dry Run (Safety First)
 Preview changes without applying them:
 ```bash
-bmv -f . -r "old" -p "new" --dry-run
+brnm -f . -r "old" -p "new" --dry-run
 ```
 
 ---
@@ -98,9 +102,9 @@ bmv -f . -r "old" -p "new" --dry-run
 ### CLI Reference
 
 ```bash
-Usage: bmv [OPTIONS] --dir <DIR>
-       bmv [OPTIONS] --dir <DIR> --regex <REGEX> --replacement <REPLACEMENT>
-       bmv --undo [OPTIONS]
+Usage: brnm [OPTIONS] --dir <DIR>
+       brnm [OPTIONS] --dir <DIR> --regex <REGEX> --replacement <REPLACEMENT>
+       brnm --undo [OPTIONS]
 
 Options:
   -f, --dir <DIR>                  Set the directory
@@ -116,7 +120,7 @@ Options:
       --max-depth <MAX_DEPTH>      Set the maximum depth for recursion (1 for current directory only)
   -c, --collision <STRATEGY>       Set the collision strategy [default: skip] [possible values: skip, overwrite, suffix]
       --undo                       Undo the previous rename operation
-      --history-file <PATH>        Set the history file path [default: .bmv-undo.json]
+      --history-file <PATH>        Set the history file path [default: .brnm-undo.json]
       --counter-start <START>      Set the starting value for the counter {i} [default: 1]
   -m, --mode <MODE>                Set the renaming mode [default: files] [possible values: files, dirs, all]
   -s, --symlinks <STRATEGY>        Set the symlink strategy [default: ignore] [possible values: ignore, rename, follow]
@@ -127,10 +131,10 @@ Options:
 
 ### Library API
 
-`bmv` can be integrated into your Rust projects as a library:
+`bulk-rename-rs` can be integrated into your Rust projects as a library:
 
 ```rust
-use bmv::{BulkRename, Callback, NoOpCallback};
+use bulk_rename_rs::{BulkRename, Callback, NoOpCallback};
 use std::path::Path;
 
 fn main() {
@@ -159,7 +163,7 @@ Inject dynamic metadata into your filenames:
 **Example:**
 ```bash
 # Rename to: 2023-10-27_001.log
-bmv -f . -r ".*\.log" -p "{date}_{i:3}.log"
+brnm -f . -r ".*\.log" -p "{date}_{i:3}.log"
 ```
 
 ### Text Transformations
@@ -171,7 +175,7 @@ Apply transformations to capture groups or static text:
 **Example:**
 ```bash
 # Matches "report_final.doc" -> "REPORT_Final.doc"
-bmv -f . -r "(.*)_(.*)\.doc" -p "{u:$1}_{t:$2}.doc"
+brnm -f . -r "(.*)_(.*)\.doc" -p "{u:$1}_{t:$2}.doc"
 ```
 
 ### Collision Handling
@@ -207,7 +211,7 @@ Once you have Rust installed, you can build the project by running the following
 ./build.sh --release
 ```
 
-The binary will be located in `target/release/bmv`.
+The binary will be located in `target/release/brnm`.
 
 ### Testing
 

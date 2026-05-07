@@ -1,4 +1,4 @@
-//! `bmv` is a command-line tool for bulk renaming files using regular expressions.
+//! `bulk-rename-rs` is a command-line tool for bulk renaming files using regular expressions.
 
 pub mod callback;
 pub mod engine;
