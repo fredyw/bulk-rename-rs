@@ -12,7 +12,7 @@ categories = ["command-line-utilities", "filesystem"]
 homepage = "https://github.com/fredyw/bulk-rename-rs"
 
 [[bin]]
-name = "brnm"
+name = "bren"
 path = "src/main.rs"
 
 [dependencies]

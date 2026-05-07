@@ -1,4 +1,4 @@
-//! Main entry point for the `brnm` CLI tool.
+//! Main entry point for the `bren` CLI tool.
 extern crate bulk_rename_rs;
 extern crate clap;
 
@@ -43,7 +43,7 @@ struct Args {
     undo: bool,
 
     /// Set the history file path for undo/rollback.
-    #[arg(long, default_value = ".brnm-undo.json")]
+    #[arg(long, default_value = ".bren-undo.json")]
     history_file: PathBuf,
 
     /// Prompt for confirmation before each rename.

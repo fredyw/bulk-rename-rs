@@ -3,7 +3,7 @@
 set -euo pipefail
 
 REPO="fredyw/bulk-rename-rs"
-BINARY_NAME="brnm"
+BINARY_NAME="bren"
 INSTALL_DIR="$HOME/.local/bin"
 mkdir -p "$INSTALL_DIR"
 
@@ -73,9 +73,9 @@ case "$ARCH" in
 esac
 
 if [[ "$PLATFORM" == "macos" && "$ARCH_NAME" == "arm64" ]]; then
-  ARTIFACT_NAME="brnm-macos-arm64"
+  ARTIFACT_NAME="bren-macos-arm64"
 elif [[ "$PLATFORM" == "linux" && "$ARCH_NAME" == "x86_64" ]]; then
-  ARTIFACT_NAME="brnm-linux-x86_64"
+  ARTIFACT_NAME="bren-linux-x86_64"
 else
   echo "Error: No prebuilt binary found for $PLATFORM-$ARCH_NAME."
   if [[ "$PLATFORM" == "macos" && "$ARCH_NAME" == "x86_64" ]]; then

@@ -32,7 +32,7 @@ Before submitting any change, ensure all tests pass:
 - **Conciseness**: Be descriptive but avoid being overly verbose. Focus on key technical decisions or rationale.
 
 ## 5. Performance & Safety
-Since `brnm` is a bulk file renaming tool:
+Since `bren` is a bulk file renaming tool:
 - **Safety First**: Ensure that file operations are safe and handle potential conflicts (e.g., name collisions) gracefully.
 - **Parallelism**: Leverage `rayon` for efficient parallel processing of large directories.
 - **Regex Efficiency**: Be mindful of regex compilation and performance, especially when processing thousands of files.

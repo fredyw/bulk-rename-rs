@@ -8,7 +8,7 @@ fn test_python_script_inline() {
     let file1 = dir.path().join("test_file.txt");
     File::create(&file1).unwrap();
 
-    let mut cmd = Command::cargo_bin("brnm").unwrap();
+    let mut cmd = Command::cargo_bin("bren").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("--python-script")
@@ -28,7 +28,7 @@ fn test_python_file() {
     let script_file = dir.path().join("script.py");
     std::fs::write(&script_file, "result = name.replace('.txt', '.csv')").unwrap();
 
-    let mut cmd = Command::cargo_bin("brnm").unwrap();
+    let mut cmd = Command::cargo_bin("bren").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("--python-file")
@@ -45,7 +45,7 @@ fn test_python_import_re() {
     let file1 = dir.path().join("file123.txt");
     File::create(&file1).unwrap();
 
-    let mut cmd = Command::cargo_bin("brnm").unwrap();
+    let mut cmd = Command::cargo_bin("bren").unwrap();
     cmd.arg("-f")
         .arg(dir.path())
         .arg("--python-script")

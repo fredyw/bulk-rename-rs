@@ -49,7 +49,7 @@ iwr -useb https://raw.githubusercontent.com/fredyw/bulk-rename-rs/main/install.p
 
 ### From crates.io
 
-If you have Rust installed, you can install `brnm` directly from [crates.io](https://crates.io/crates/bulk-rename-rs):
+If you have Rust installed, you can install `bren` directly from [crates.io](https://crates.io/crates/bulk-rename-rs):
 
 ```bash
 cargo install bulk-rename-rs
@@ -72,25 +72,25 @@ Get started with common renaming tasks:
 ### Basic Regex Rename
 Rename all `.txt` files by adding a prefix:
 ```bash
-brnm -f . -r "(.*)\.txt" -p "prefix_$1.txt"
+bren -f . -r "(.*)\.txt" -p "prefix_$1.txt"
 ```
 
 ### Add a Sequential Counter
 Rename files to `image_001.jpg`, `image_002.jpg`, etc.:
 ```bash
-brnm -f ./photos -r ".*\.jpg" -p "image_{i:3}.jpg"
+bren -f ./photos -r ".*\.jpg" -p "image_{i:3}.jpg"
 ```
 
 ### Case Transformation
 Convert all filenames to uppercase:
 ```bash
-brnm -f . -r "(.*)" -p "{u:$1}"
+bren -f . -r "(.*)" -p "{u:$1}"
 ```
 
 ### Dry Run (Safety First)
 Preview changes without applying them:
 ```bash
-brnm -f . -r "old" -p "new" --dry-run
+bren -f . -r "old" -p "new" --dry-run
 ```
 
 ---
@@ -100,9 +100,9 @@ brnm -f . -r "old" -p "new" --dry-run
 ### CLI Reference
 
 ```bash
-Usage: brnm [OPTIONS] --dir <DIR>
-       brnm [OPTIONS] --dir <DIR> --regex <REGEX> --replacement <REPLACEMENT>
-       brnm --undo [OPTIONS]
+Usage: bren [OPTIONS] --dir <DIR>
+       bren [OPTIONS] --dir <DIR> --regex <REGEX> --replacement <REPLACEMENT>
+       bren --undo [OPTIONS]
 
 Options:
   -f, --dir <DIR>                  Set the directory
@@ -118,7 +118,7 @@ Options:
       --max-depth <MAX_DEPTH>      Set the maximum depth for recursion (1 for current directory only)
   -c, --collision <STRATEGY>       Set the collision strategy [default: skip] [possible values: skip, overwrite, suffix]
       --undo                       Undo the previous rename operation
-      --history-file <PATH>        Set the history file path [default: .brnm-undo.json]
+      --history-file <PATH>        Set the history file path [default: .bren-undo.json]
       --counter-start <START>      Set the starting value for the counter {i} [default: 1]
   -m, --mode <MODE>                Set the renaming mode [default: files] [possible values: files, dirs, all]
   -s, --symlinks <STRATEGY>        Set the symlink strategy [default: ignore] [possible values: ignore, rename, follow]
@@ -163,7 +163,7 @@ Inject dynamic metadata into your filenames:
 **Example:**
 ```bash
 # Rename to: 2023-10-27_001.log
-brnm -f . -r ".*\.log" -p "{date}_{i:3}.log"
+bren -f . -r ".*\.log" -p "{date}_{i:3}.log"
 ```
 
 ### Text Transformations
@@ -175,7 +175,7 @@ Apply transformations to capture groups or static text:
 **Example:**
 ```bash
 # Matches "report_final.doc" -> "REPORT_Final.doc"
-brnm -f . -r "(.*)_(.*)\.doc" -p "{u:$1}_{t:$2}.doc"
+bren -f . -r "(.*)_(.*)\.doc" -p "{u:$1}_{t:$2}.doc"
 ```
 
 ### Collision Handling
@@ -209,15 +209,15 @@ Your script (whether inline or from a file) must set the `result` variable to th
 **Examples:**
 ```bash
 # Inline snippet: uppercase
-brnm -f . --python-script "result = name.upper()"
+bren -f . --python-script "result = name.upper()"
 
 # Inline snippet: regex substitution
-brnm -f . --python-script "import re; result = re.sub(r'\d+', '', name)"
+bren -f . --python-script "import re; result = re.sub(r'\d+', '', name)"
 
 # Loading from a file
 # File: my_logic.py
 # result = name.replace(' ', '_').lower()
-brnm -f . --python-file my_logic.py
+bren -f . --python-file my_logic.py
 ```
 
 ---
@@ -234,7 +234,7 @@ Once you have Rust installed, you can build the project by running the following
 ./build.sh --release
 ```
 
-The binary will be located in `target/release/brnm`.
+The binary will be located in `target/release/bren`.
 
 ### Testing
 

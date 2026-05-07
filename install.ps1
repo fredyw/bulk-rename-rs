@@ -1,9 +1,9 @@
 $ErrorActionPreference = 'Stop'
 
 $Repo = "fredyw/bulk-rename-rs"
-$BinaryName = "brnm.exe"
-$InstallDir = Join-Path $HOME ".brnm\bin"
-$ArtifactName = "brnm-windows-x86_64.exe"
+$BinaryName = "bren.exe"
+$InstallDir = Join-Path $HOME ".bren\bin"
+$ArtifactName = "bren-windows-x86_64.exe"
 
 if (-not (Test-Path $InstallDir)) {
     New-Item -Path $InstallDir -ItemType Directory | Out-Null
