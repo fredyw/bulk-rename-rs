@@ -17,7 +17,9 @@ fn test_cli_basic_rename() {
         .arg("-r")
         .arg("test_(\\d+).txt")
         .arg("-p")
-        .arg("file_${1}.txt");
+        .arg("file_${1}.txt")
+        .arg("--history-file")
+        .arg(dir.path().join("history.json"));
 
     cmd.assert()
         .success()
@@ -43,7 +45,9 @@ fn test_cli_dry_run() {
         .arg("test_(\\d+).txt")
         .arg("-p")
         .arg("file_${1}.txt")
-        .arg("-d");
+        .arg("-d")
+        .arg("--history-file")
+        .arg(dir.path().join("history.json"));
 
     cmd.assert()
         .success()
@@ -66,7 +70,9 @@ fn test_cli_quiet_mode() {
         .arg("test_(\\d+).txt")
         .arg("-p")
         .arg("file_${1}.txt")
-        .arg("-q");
+        .arg("-q")
+        .arg("--history-file")
+        .arg(dir.path().join("history.json"));
 
     cmd.assert().success().stdout(predicate::str::is_empty());
 
@@ -83,7 +89,9 @@ fn test_cli_invalid_regex() {
         .arg("-r")
         .arg("test_(\\d+.txt") // Missing closing parenthesis
         .arg("-p")
-        .arg("file_${1}.txt");
+        .arg("file_${1}.txt")
+        .arg("--history-file")
+        .arg(dir.path().join("history.json"));
 
     cmd.assert()
         .success() // bmv seems to return success even on regex error in run(), just prints to stderr
@@ -98,7 +106,9 @@ fn test_cli_not_a_directory() {
         .arg("-r")
         .arg("foo")
         .arg("-p")
-        .arg("bar");
+        .arg("bar")
+        .arg("--history-file")
+        .arg("history.json"); // This one is tricky as dir is not defined here, but the command is expected to fail anyway due to not a dir.
 
     cmd.assert()
         .success()
@@ -160,7 +170,9 @@ fn test_cli_collision_skip() {
         .arg("-p")
         .arg("file_${1}.txt")
         .arg("-c")
-        .arg("skip");
+        .arg("skip")
+        .arg("--history-file")
+        .arg(dir.path().join("history.json"));
 
     cmd.assert().success();
 
@@ -184,7 +196,9 @@ fn test_cli_collision_overwrite() {
         .arg("-p")
         .arg("file_${1}.txt")
         .arg("-c")
-        .arg("overwrite");
+        .arg("overwrite")
+        .arg("--history-file")
+        .arg(dir.path().join("history.json"));
 
     cmd.assert().success();
 
@@ -208,7 +222,9 @@ fn test_cli_collision_suffix() {
         .arg("-p")
         .arg("file_${1}.txt")
         .arg("-c")
-        .arg("suffix");
+        .arg("suffix")
+        .arg("--history-file")
+        .arg(dir.path().join("history.json"));
 
     cmd.assert().success();
 
