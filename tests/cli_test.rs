@@ -431,3 +431,60 @@ fn test_cli_counter() {
     assert!(dir.path().join("file_005.txt").exists());
     assert!(dir.path().join("file_006.txt").exists());
 }
+
+#[test]
+fn test_cli_rename_dirs() {
+    let dir = tempdir().unwrap();
+    let sub = dir.path().join("sub_dir");
+    std::fs::create_dir(&sub).unwrap();
+    let file = sub.join("file.txt");
+    std::fs::File::create(&file).unwrap();
+
+    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    cmd.arg("-f")
+        .arg(dir.path())
+        .arg("-r")
+        .arg("sub_dir")
+        .arg("-p")
+        .arg("renamed_dir")
+        .arg("-m")
+        .arg("dirs")
+        .arg("--history-file")
+        .arg(dir.path().join("history.json"));
+
+    cmd.assert().success();
+
+    assert!(dir.path().join("renamed_dir").exists());
+    assert!(dir.path().join("renamed_dir/file.txt").exists());
+    assert!(!sub.exists());
+}
+
+#[test]
+fn test_cli_rename_all() {
+    let dir = tempdir().unwrap();
+    let sub = dir.path().join("sub_dir");
+    std::fs::create_dir(&sub).unwrap();
+    let file = sub.join("test.txt");
+    std::fs::File::create(&file).unwrap();
+
+    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    cmd.arg("-f")
+        .arg(dir.path())
+        .arg("-r")
+        .arg("test|sub_dir")
+        .arg("-p")
+        .arg("renamed")
+        .arg("-m")
+        .arg("all")
+        .arg("--history-file")
+        .arg(dir.path().join("history.json"));
+
+    cmd.assert().success();
+
+    // sub_dir -> renamed
+    // test.txt -> renamed.txt
+    assert!(dir.path().join("renamed").exists());
+    assert!(dir.path().join("renamed/renamed.txt").exists());
+    assert!(!sub.exists());
+    assert!(!file.exists());
+}

@@ -4,7 +4,6 @@ use crate::models::{CollisionStrategy, RenameHistory};
 use chrono::{DateTime, Local};
 use rayon::prelude::*;
 use regex::Regex;
-use std::borrow::Cow;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -33,6 +32,10 @@ pub struct BulkRename<'a> {
     max_depth: Option<usize>,
     /// The current counter value for {i}.
     counter: AtomicUsize,
+    /// Whether to rename files.
+    rename_files: bool,
+    /// Whether to rename directories.
+    rename_dirs: bool,
 }
 
 impl<'a> BulkRename<'a> {
@@ -52,6 +55,8 @@ impl<'a> BulkRename<'a> {
             exclude_patterns: Vec::new(),
             max_depth: None,
             counter: AtomicUsize::new(1),
+            rename_files: true,
+            rename_dirs: false,
         })
     }
 
@@ -108,6 +113,18 @@ impl<'a> BulkRename<'a> {
         self
     }
 
+    /// Sets whether to rename directories.
+    pub fn with_rename_dirs(mut self, rename_dirs: bool) -> Self {
+        self.rename_dirs = rename_dirs;
+        self
+    }
+
+    /// Sets whether to rename files.
+    pub fn with_rename_files(mut self, rename_files: bool) -> Self {
+        self.rename_files = rename_files;
+        self
+    }
+
     /// Executes a function `f` for any files that match the specified regex.
     ///
     /// The function `f` is called with the original path and the calculated new path.
@@ -128,16 +145,43 @@ impl<'a> BulkRename<'a> {
         if let Some(depth) = self.max_depth {
             walker = walker.max_depth(depth);
         }
+        if self.rename_dirs {
+            walker = walker.contents_first(true);
+        }
 
         let mut entries: Vec<_> = walker
             .into_iter()
             .filter_map(|entry| entry.ok())
-            .filter(|entry| entry.file_type().is_file())
+            .filter(|entry| {
+                if entry.file_type().is_file() {
+                    self.rename_files
+                } else if self.rename_dirs && entry.file_type().is_dir() {
+                    // Don't rename the root directory
+                    entry.depth() > 0
+                } else {
+                    false
+                }
+            })
             .filter(|entry| self.filter_entry(entry))
             .collect();
 
-        // Always sort for predictability
-        entries.sort_by(|a, b| a.path().cmp(b.path()));
+        // Always sort for predictability.
+        // If rename_dirs is true, we rely on contents_first(true) which gives us bottom-up.
+        // If we sort by path, we might break the bottom-up order if we are not careful.
+        // Actually, WalkDir with contents_first(true) already provides a good order.
+        // But if we want to be predictable across runs, we might want to sort, but we must maintain depth.
+
+        if !self.rename_dirs {
+            entries.sort_by(|a, b| a.path().cmp(b.path()));
+        } else {
+            // Sort by depth descending, then by path.
+            // This ensures we process children before parents even after sorting.
+            entries.sort_by(|a, b| {
+                let depth_a = a.depth();
+                let depth_b = b.depth();
+                depth_b.cmp(&depth_a).then_with(|| a.path().cmp(b.path()))
+            });
+        }
 
         let mut plan = Vec::new();
         for entry in entries {
@@ -186,14 +230,12 @@ impl<'a> BulkRename<'a> {
         F: FnMut(&Path, &Path),
     {
         if let Some(old_file_name) = path.file_name().and_then(|n| n.to_str()) {
-            let new_file_name = self.regex.replace_all(old_file_name, self.replacement);
-            if let Cow::Owned(new_name) = new_file_name {
-                if old_file_name != new_name {
-                    let mut new_path = path.to_path_buf();
-                    let processed_name = self.process_dynamic_variables(&new_name, path);
-                    new_path.set_file_name(processed_name);
-                    f(path, &new_path);
-                }
+            let new_name = self.regex.replace_all(old_file_name, self.replacement);
+            if old_file_name != new_name {
+                let mut new_path = path.to_path_buf();
+                let processed_name = self.process_dynamic_variables(&new_name, path);
+                new_path.set_file_name(processed_name);
+                f(path, &new_path);
             }
         }
     }
@@ -511,5 +553,47 @@ mod tests {
 
         let result = bulk_rename.resolve_collision(&old_path, &new_path, &targets);
         assert_eq!(result.unwrap(), dir.path().join("new (1).txt"));
+    }
+
+    #[test]
+    fn test_bulk_rename_directories() {
+        let dir = tempdir().unwrap();
+        let sub_dir = dir.path().join("sub");
+        fs::create_dir(&sub_dir).unwrap();
+        let file = sub_dir.join("file.txt");
+        File::create(&file).unwrap();
+
+        let bulk_rename = BulkRename::new(dir.path(), "sub", "SUB")
+            .unwrap()
+            .with_rename_files(false)
+            .with_rename_dirs(true);
+
+        let plan = bulk_rename.generate_plan();
+        assert_eq!(plan.len(), 1);
+        assert_eq!(plan[0].0, sub_dir);
+        assert_eq!(plan[0].1, dir.path().join("SUB"));
+    }
+
+    #[test]
+    fn test_bulk_rename_directories_recursive() {
+        let dir = tempdir().unwrap();
+        let sub_dir = dir.path().join("sub");
+        fs::create_dir(&sub_dir).unwrap();
+        let sub_sub_dir = sub_dir.join("inner");
+        fs::create_dir(&sub_sub_dir).unwrap();
+
+        let bulk_rename = BulkRename::new(dir.path(), ".*", "{u:$0}")
+            .unwrap()
+            .with_rename_files(false)
+            .with_rename_dirs(true);
+
+        let plan = bulk_rename.generate_plan();
+        // Should have "inner" -> "INNER" and "sub" -> "SUB"
+        // Because of depth descending sort, "inner" should come first.
+        assert_eq!(plan.len(), 2);
+        assert_eq!(plan[0].0, sub_sub_dir);
+        assert_eq!(plan[0].1, sub_dir.join("INNER"));
+        assert_eq!(plan[1].0, sub_dir);
+        assert_eq!(plan[1].1, dir.path().join("SUB"));
     }
 }

@@ -3,7 +3,7 @@ extern crate bmv;
 extern crate clap;
 
 use bmv::{BulkRename, Callback, CollisionStrategy, HistoryCallback, RenameHistory};
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use std::collections::HashSet;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
@@ -71,6 +71,18 @@ struct Args {
     /// Set the starting value for the counter {i}.
     #[arg(long, default_value_t = 1)]
     counter_start: usize,
+
+    /// Set the renaming mode.
+    #[arg(short = 'm', long, value_enum, default_value_t = RenameMode::Files)]
+    mode: RenameMode,
+}
+
+#[derive(ValueEnum, Clone, Debug, Default, PartialEq, Eq)]
+enum RenameMode {
+    #[default]
+    Files,
+    Dirs,
+    All,
 }
 
 /// A callback implementation for the CLI.
@@ -127,7 +139,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .with_include_patterns(args.include)?
         .with_exclude_patterns(args.exclude)?
         .with_max_depth(args.max_depth)
-        .with_counter_start(args.counter_start);
+        .with_counter_start(args.counter_start)
+        .with_rename_files(args.mode == RenameMode::Files || args.mode == RenameMode::All)
+        .with_rename_dirs(args.mode == RenameMode::Dirs || args.mode == RenameMode::All);
 
     if args.dry_run {
         let targets = Mutex::new(HashSet::new());
