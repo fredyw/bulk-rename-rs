@@ -3,6 +3,13 @@ name = "bulk-rename-rs"
 version = "0.1.0"
 edition = "2021"
 authors = ["Fredy Wijaya"]
+description = "A powerful, high-performance bulk file renaming tool and library with regex support, transactional safety, and Python scripting."
+license = "Apache-2.0"
+repository = "https://github.com/fredyw/bulk-rename-rs"
+readme = "README.md"
+keywords = ["rename", "bulk", "regex", "python", "scripting"]
+categories = ["command-line-utilities", "filesystem"]
+homepage = "https://github.com/fredyw/bulk-rename-rs"
 
 [[bin]]
 name = "brnm"
