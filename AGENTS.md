@@ -37,6 +37,8 @@ Since `bmv` is a bulk file renaming tool:
 - **Parallelism**: Leverage `rayon` for efficient parallel processing of large directories.
 - **Regex Efficiency**: Be mindful of regex compilation and performance, especially when processing thousands of files.
 - **Dry Run**: Always consider how changes affect the "dry run" functionality to ensure users can preview changes safely.
+- **Transactions**: Respect `TransactionStrategy` (Continue, Abort, Rollback) when implementing new renaming logic. Ensure `Rollback` correctly reverts changes on failure.
+- **Symlinks**: Handle symbolic links according to the `SymlinkStrategy`. Be cautious when following links to avoid infinite loops or out-of-scope renames.
 
 ## 6. Repository Structure
 - `src/lib.rs`: Main library entry point and re-exports.

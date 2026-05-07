@@ -7,85 +7,53 @@ A powerful command-line tool for bulk renaming files using regular expressions, 
 
 ## Table of Contents
 
+- [Quick Start](#quick-start)
+- [Usage](#usage)
+    - [CLI Reference](#cli-reference)
+    - [Library API](#library-api)
 - [Features](#features)
     - [Dynamic Variables](#dynamic-variables)
     - [Text Transformations](#text-transformations)
     - [Collision Handling](#collision-handling)
-    - [Undo & Rollback](#undo--rollback)
     - [Transactional Renames](#transactional-renames)
-    - [Filtering](#filtering)
-    - [Interactive Mode](#interactive-mode)
-- [Usage](#usage)
-    - [CLI](#cli)
-    - [API](#api)
+    - [Filtering & Modes](#filtering--modes)
 - [Installation](#installation)
-- [Testing](#testing)
 - [Contributing](#contributing)
 - [License](#license)
 
-## Features
+## Quick Start
 
-### Dynamic Variables
-Placeholders in the replacement string allow for dynamic naming:
-- `{i}`: An auto-incrementing counter. Use `{i:N}` (e.g., `{i:3}`) for padding (e.g., `001`).
-- `{date}`: The file's modification date in `%Y-%m-%d` format.
-- `{date:FORMAT}`: The file's modification date with a custom [chrono format](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) (e.g., `{date:%Y%m%d}`).
+Get started with common renaming tasks:
 
-### Text Transformations
-Apply built-in transformations to matched groups or static text:
-- `{u:TEXT}` or `{upper:TEXT}`: Convert to UPPERCASE.
-- `{l:TEXT}` or `{lower:TEXT}`: Convert to lowercase.
-- `{t:TEXT}` or `{title:TEXT}`: Convert to Title Case.
-
-Example: `-p "{u:$1}_{l:$2}_{t:$1 $2}.txt"`
-
-> [!NOTE]
-> When dynamic variables are used, files are processed in alphabetical order to ensure deterministic assignment.
-
-### Collision Handling
-Define how to handle cases where the target filename already exists using the `--collision` flag:
-- `skip` (default): Skip the rename if the destination exists.
-- `overwrite`: Replace the existing file.
-- `suffix`: Append a numeric suffix (e.g., `file.txt` -> `file (1).txt`).
-
-### Undo & Rollback
-Mistakes happen. `bmv` tracks renames in a history file (defaults to `.bmv-undo.json`), allowing you to revert the last operation:
+### Basic Regex Rename
+Rename all `.txt` files by adding a prefix:
 ```bash
-bmv --undo
+bmv -f . -r "(.*)\.txt" -p "prefix_$1.txt"
 ```
 
-### Transactional Renames
-Maintain a consistent state during bulk operations using the `--transaction` (or `-T`) flag:
-- `continue` (default): Best-effort renaming. Continue with other files even if one fails.
-- `abort`: Stop immediately on the first error.
-- `rollback`: Stop immediately and undo any successful renames from the current session if an error occurs.
+### Add a Sequential Counter
+Rename files to `image_001.jpg`, `image_002.jpg`, etc.:
+```bash
+bmv -f ./photos -r ".*\.jpg" -p "image_{i:3}.jpg"
+```
 
-> [!CAUTION]
-> `abort` and `rollback` strategies perform renames **sequentially** to ensure a predictable state.
+### Case Transformation
+Convert all filenames to uppercase:
+```bash
+bmv -f . -r "(.*)" -p "{u:$1}"
+```
 
-### Filtering
-Precisely target files using multiple filtering options:
-- **Extensions**: Filter by file extension (e.g., `--ext jpg,png`).
-- **Include/Exclude**: Use regex patterns to include or exclude specific files.
-- **Max Depth**: Control recursion depth (e.g., `--max-depth 1` for current directory only).
-- **Renaming Mode**: Specify whether to rename files, directories, or both using the `--mode` (or `-m`) flag.
-- **Symlink Strategy**: Define how to handle symbolic links using the `--symlinks` (or `-s`) flag:
-    - `ignore` (default): Skip symbolic links.
-    - `rename`: Rename the symbolic link itself.
-    - `follow`: Resolve the symbolic link and rename the target file or directory.
+### Dry Run (Safety First)
+Preview changes without applying them:
+```bash
+bmv -f . -r "old" -p "new" --dry-run
+```
 
-> [!IMPORTANT]
-> **Precedence**: `exclude` patterns have the highest priority. If a file matches both an `include` and an `exclude` pattern, it will be **excluded**.
-
-### Interactive Mode
-For sensitive renames, use the `--interactive` (or `-i`) flag to prompt for confirmation before each file is renamed.
-
-### Parallel Execution
-`bmv` leverages `rayon` to perform renaming operations in parallel across multiple threads, making it extremely fast even for thousands of files.
+---
 
 ## Usage
 
-### CLI
+### CLI Reference
 
 ```bash
 Usage: bmv [OPTIONS] --dir <DIR>
@@ -115,53 +83,89 @@ Options:
   -V, --version                    Print version
 ```
 
-### API
+### Library API
 
-`bmv` can also be used as a library in your Rust projects:
+`bmv` can be integrated into your Rust projects as a library:
 
 ```rust
-use bmv::{BulkRename, Callback, CollisionStrategy};
+use bmv::{BulkRename, Callback, NoOpCallback};
 use std::path::Path;
 
-struct SimpleCallback {}
-
-impl Callback for SimpleCallback {
-    fn on_ok(&self, old_path: &Path, new_path: &Path) {
-        println!("OK: {} --> {}", old_path.display(), new_path.display());
-    }
-
-    fn on_error(&self, old_path: &Path, new_path: &Path, error: std::io::Error) {
-        eprintln!("Error: Unable to rename {} to {}: {}", old_path.display(), new_path.display(), error);
-    }
-}
-
 fn main() {
-    let bulk_rename = BulkRename::new(Path::new("./files"), r"old_(.*)\.txt", r"new_$1.txt").unwrap();
+    let bulk_rename = BulkRename::new(
+        Path::new("./files"), 
+        r"old_(.*)\.txt", 
+        r"new_$1.txt"
+    ).unwrap();
     
-    // Execute renames in parallel with a callback
-    bulk_rename.execute(SimpleCallback::new());
+    // Execute renames in parallel
+    bulk_rename.execute(NoOpCallback::new());
 }
 ```
+
+---
+
+## Features
+
+### Dynamic Variables
+Inject dynamic metadata into your filenames:
+- `{i}`: Auto-incrementing counter.
+- `{i:N}`: Counter with zero-padding (e.g., `{i:3}` -> `001`).
+- `{date}`: File modification date (`YYYY-MM-DD`).
+- `{date:FORMAT}`: Custom date format (e.g., `{date:%Y%m%d}`).
+
+**Example:**
+```bash
+# Rename to: 2023-10-27_001.log
+bmv -f . -r ".*\.log" -p "{date}_{i:3}.log"
+```
+
+### Text Transformations
+Apply transformations to capture groups or static text:
+- `{u:TEXT}` / `{upper:TEXT}`: UPPERCASE
+- `{l:TEXT}` / `{lower:TEXT}`: lowercase
+- `{t:TEXT}` / `{title:TEXT}`: Title Case
+
+**Example:**
+```bash
+# Matches "report_final.doc" -> "REPORT_Final.doc"
+bmv -f . -r "(.*)_(.*)\.doc" -p "{u:$1}_{t:$2}.doc"
+```
+
+### Collision Handling
+Control what happens when a target filename already exists:
+- `skip` (default): Skip the file.
+- `overwrite`: Overwrite the existing file.
+- `suffix`: Append a numeric suffix (e.g., `file (1).txt`).
+
+### Transactional Renames
+Ensure consistency during bulk operations:
+- `continue` (default): Skip errors and keep going.
+- `abort`: Stop on the first error.
+- `rollback`: Stop and undo all successful renames from the current session if an error occurs.
+
+### Filtering & Modes
+- **File Types**: Filter by extension (`--ext jpg,png`).
+- **Path Filtering**: Use `--include` and `--exclude` regex patterns.
+- **Recursion**: Control depth with `--max-depth`.
+- **Modes**: Rename `files`, `dirs`, or `all`.
+- **Symlinks**: Choose to `ignore`, `rename` the link, or `follow` to the target.
+
+---
 
 ## Installation
 
-To install `bmv`, you can use the provided installation script:
-
 ```bash
+# Build and install locally
 ./install.sh
-```
-
-## Testing
-
-To run the test suite, use the following command:
-
-```bash
-./test.sh
 ```
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a pull request or open an issue.
+Contributions are welcome! 
+
+### AI Agents
+If you are an **AI Agent** contributing to this repository, please read **[AGENTS.md](AGENTS.md)** before making any changes. It contains specific rules and workflows designed for agentic contributions.
 
 ## License
 
