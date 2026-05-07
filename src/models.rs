@@ -15,6 +15,45 @@ pub enum CollisionStrategy {
     Suffix,
 }
 
+/// Strategies for handling symbolic links.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum SymlinkStrategy {
+    /// Ignore symbolic links.
+    #[default]
+    Ignore,
+    /// Rename the symbolic link itself.
+    Rename,
+    /// Follow the symbolic link and rename the target.
+    Follow,
+}
+
+impl FromStr for SymlinkStrategy {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "ignore" => Ok(SymlinkStrategy::Ignore),
+            "rename" => Ok(SymlinkStrategy::Rename),
+            "follow" => Ok(SymlinkStrategy::Follow),
+            _ => Err(format!(
+                "invalid symlink strategy: {}. Valid values are: ignore, rename, follow",
+                s
+            )),
+        }
+    }
+}
+
+impl fmt::Display for SymlinkStrategy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            SymlinkStrategy::Ignore => "ignore",
+            SymlinkStrategy::Rename => "rename",
+            SymlinkStrategy::Follow => "follow",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 impl FromStr for CollisionStrategy {
     type Err = String;
 
@@ -101,5 +140,34 @@ mod tests {
     #[test]
     fn test_collision_strategy_default() {
         assert_eq!(CollisionStrategy::default(), CollisionStrategy::Skip);
+    }
+
+    #[test]
+    fn test_symlink_strategy_from_str() {
+        assert_eq!(
+            SymlinkStrategy::from_str("ignore").unwrap(),
+            SymlinkStrategy::Ignore
+        );
+        assert_eq!(
+            SymlinkStrategy::from_str("RENAME").unwrap(),
+            SymlinkStrategy::Rename
+        );
+        assert_eq!(
+            SymlinkStrategy::from_str("Follow").unwrap(),
+            SymlinkStrategy::Follow
+        );
+        assert!(SymlinkStrategy::from_str("invalid").is_err());
+    }
+
+    #[test]
+    fn test_symlink_strategy_display() {
+        assert_eq!(SymlinkStrategy::Ignore.to_string(), "ignore");
+        assert_eq!(SymlinkStrategy::Rename.to_string(), "rename");
+        assert_eq!(SymlinkStrategy::Follow.to_string(), "follow");
+    }
+
+    #[test]
+    fn test_symlink_strategy_default() {
+        assert_eq!(SymlinkStrategy::default(), SymlinkStrategy::Ignore);
     }
 }

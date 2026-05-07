@@ -1,6 +1,6 @@
 use crate::callback::Callback;
 use crate::error::Error;
-use crate::models::{CollisionStrategy, RenameHistory};
+use crate::models::{CollisionStrategy, RenameHistory, SymlinkStrategy};
 use chrono::{DateTime, Local};
 use rayon::prelude::*;
 use regex::Regex;
@@ -36,6 +36,8 @@ pub struct BulkRename<'a> {
     rename_files: bool,
     /// Whether to rename directories.
     rename_dirs: bool,
+    /// The strategy for handling symlinks.
+    symlink_strategy: SymlinkStrategy,
 }
 
 impl<'a> BulkRename<'a> {
@@ -57,6 +59,7 @@ impl<'a> BulkRename<'a> {
             counter: AtomicUsize::new(1),
             rename_files: true,
             rename_dirs: false,
+            symlink_strategy: SymlinkStrategy::default(),
         })
     }
 
@@ -125,6 +128,12 @@ impl<'a> BulkRename<'a> {
         self
     }
 
+    /// Sets the symlink strategy.
+    pub fn with_symlink_strategy(mut self, strategy: SymlinkStrategy) -> Self {
+        self.symlink_strategy = strategy;
+        self
+    }
+
     /// Executes a function `f` for any files that match the specified regex.
     ///
     /// The function `f` is called with the original path and the calculated new path.
@@ -153,9 +162,16 @@ impl<'a> BulkRename<'a> {
             .into_iter()
             .filter_map(|entry| entry.ok())
             .filter(|entry| {
-                if entry.file_type().is_file() {
+                let ft = entry.file_type();
+                if ft.is_symlink() {
+                    match self.symlink_strategy {
+                        SymlinkStrategy::Ignore => false,
+                        SymlinkStrategy::Rename => true,
+                        SymlinkStrategy::Follow => true,
+                    }
+                } else if ft.is_file() {
                     self.rename_files
-                } else if self.rename_dirs && entry.file_type().is_dir() {
+                } else if self.rename_dirs && ft.is_dir() {
                     // Don't rename the root directory
                     entry.depth() > 0
                 } else {
@@ -184,8 +200,32 @@ impl<'a> BulkRename<'a> {
         }
 
         let mut plan = Vec::new();
+        let mut seen_paths = HashSet::new();
         for entry in entries {
-            self.process_entry(entry.path(), |old, new| {
+            let path = entry.path();
+            let target_path = if entry.file_type().is_symlink()
+                && self.symlink_strategy == SymlinkStrategy::Follow
+            {
+                match fs::read_link(path) {
+                    Ok(link) => {
+                        if link.is_absolute() {
+                            link
+                        } else {
+                            path.parent().unwrap_or(Path::new("")).join(link)
+                        }
+                    }
+                    Err(_) => path.to_path_buf(),
+                }
+            } else {
+                path.to_path_buf()
+            };
+
+            if seen_paths.contains(&target_path) {
+                continue;
+            }
+            seen_paths.insert(target_path.clone());
+
+            self.process_entry(&target_path, |old, new| {
                 plan.push((old.to_path_buf(), new.to_path_buf()));
             });
         }
@@ -595,5 +635,62 @@ mod tests {
         assert_eq!(plan[0].1, sub_dir.join("INNER"));
         assert_eq!(plan[1].0, sub_dir);
         assert_eq!(plan[1].1, dir.path().join("SUB"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_bulk_rename_symlink_ignore() {
+        let dir = tempdir().unwrap();
+        let file = dir.path().join("file.txt");
+        File::create(&file).unwrap();
+        let link = dir.path().join("link.txt");
+        std::os::unix::fs::symlink(&file, &link).unwrap();
+
+        let bulk_rename = BulkRename::new(dir.path(), "link", "new_link")
+            .unwrap()
+            .with_symlink_strategy(SymlinkStrategy::Ignore);
+
+        let plan = bulk_rename.generate_plan();
+        assert_eq!(plan.len(), 0);
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_bulk_rename_symlink_rename() {
+        let dir = tempdir().unwrap();
+        let file = dir.path().join("file.txt");
+        File::create(&file).unwrap();
+        let link = dir.path().join("link.txt");
+        std::os::unix::fs::symlink(&file, &link).unwrap();
+
+        let bulk_rename = BulkRename::new(dir.path(), "link", "new_link")
+            .unwrap()
+            .with_symlink_strategy(SymlinkStrategy::Rename);
+
+        let plan = bulk_rename.generate_plan();
+        assert_eq!(plan.len(), 1);
+        assert_eq!(plan[0].0, link);
+        assert_eq!(plan[0].1, dir.path().join("new_link.txt"));
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_bulk_rename_symlink_follow() {
+        let dir = tempdir().unwrap();
+        let file = dir.path().join("file.txt");
+        File::create(&file).unwrap();
+        let link = dir.path().join("link.txt");
+        std::os::unix::fs::symlink(&file, &link).unwrap();
+
+        // Match "file" (the target) through the link
+        let bulk_rename = BulkRename::new(dir.path(), "file", "new_file")
+            .unwrap()
+            .with_symlink_strategy(SymlinkStrategy::Follow);
+
+        let plan = bulk_rename.generate_plan();
+        assert_eq!(plan.len(), 1); // Matches "file.txt" and "link.txt" (following to "file.txt"), but de-duplicated
+
+        let paths: Vec<_> = plan.iter().map(|(o, _)| o.clone()).collect();
+        assert!(paths.contains(&file));
     }
 }

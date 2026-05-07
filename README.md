@@ -59,6 +59,10 @@ Precisely target files using multiple filtering options:
 - **Include/Exclude**: Use regex patterns to include or exclude specific files.
 - **Max Depth**: Control recursion depth (e.g., `--max-depth 1` for current directory only).
 - **Renaming Mode**: Specify whether to rename files, directories, or both using the `--mode` (or `-m`) flag.
+- **Symlink Strategy**: Define how to handle symbolic links using the `--symlinks` (or `-s`) flag:
+    - `ignore` (default): Skip symbolic links.
+    - `rename`: Rename the symbolic link itself.
+    - `follow`: Resolve the symbolic link and rename the target file or directory.
 
 > [!IMPORTANT]
 > **Precedence**: `exclude` patterns have the highest priority. If a file matches both an `include` and an `exclude` pattern, it will be **excluded**.
@@ -95,6 +99,7 @@ Options:
       --history-file <PATH>        Set the history file path [default: .bmv-undo.json]
       --counter-start <START>      Set the starting value for the counter {i} [default: 1]
   -m, --mode <MODE>                Set the renaming mode [default: files] [possible values: files, dirs, all]
+  -s, --symlinks <STRATEGY>        Set the symlink strategy [default: ignore] [possible values: ignore, rename, follow]
   -h, --help                       Print help
   -V, --version                    Print version
 ```

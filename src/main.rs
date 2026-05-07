@@ -2,7 +2,9 @@
 extern crate bmv;
 extern crate clap;
 
-use bmv::{BulkRename, Callback, CollisionStrategy, HistoryCallback, RenameHistory};
+use bmv::{
+    BulkRename, Callback, CollisionStrategy, HistoryCallback, RenameHistory, SymlinkStrategy,
+};
 use clap::{Parser, ValueEnum};
 use std::collections::HashSet;
 use std::io::{self, Write};
@@ -75,6 +77,10 @@ struct Args {
     /// Set the renaming mode.
     #[arg(short = 'm', long, value_enum, default_value_t = RenameMode::Files)]
     mode: RenameMode,
+
+    /// Set the symlink strategy.
+    #[arg(short = 's', long, default_value = "ignore")]
+    symlinks: SymlinkStrategy,
 }
 
 #[derive(ValueEnum, Clone, Debug, Default, PartialEq, Eq)]
@@ -141,7 +147,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .with_max_depth(args.max_depth)
         .with_counter_start(args.counter_start)
         .with_rename_files(args.mode == RenameMode::Files || args.mode == RenameMode::All)
-        .with_rename_dirs(args.mode == RenameMode::Dirs || args.mode == RenameMode::All);
+        .with_rename_dirs(args.mode == RenameMode::Dirs || args.mode == RenameMode::All)
+        .with_symlink_strategy(args.symlinks);
 
     if args.dry_run {
         let targets = Mutex::new(HashSet::new());
