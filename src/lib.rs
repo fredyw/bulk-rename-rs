@@ -1,4 +1,11 @@
 //! `bmv` is a command-line tool for bulk renaming files using regular expressions.
-pub mod bulk_rename;
 
-pub use crate::bulk_rename::*;
+pub mod callback;
+pub mod engine;
+pub mod error;
+pub mod models;
+
+pub use callback::{Callback, NoOpCallback};
+pub use engine::BulkRename;
+pub use error::Error;
+pub use models::CollisionStrategy;

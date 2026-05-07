@@ -1,12 +1,13 @@
+use crate::callback::Callback;
+use crate::error::Error;
+use crate::models::CollisionStrategy;
 use rayon::prelude::*;
 use regex::Regex;
 use std::borrow::Cow;
 use std::collections::HashSet;
-use std::fmt;
+use std::fs;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use std::sync::Mutex;
-use std::{fs, io};
 use walkdir::WalkDir;
 
 /// A bulk rename operation.
@@ -22,92 +23,13 @@ pub struct BulkRename<'a> {
     collision_strategy: CollisionStrategy,
 }
 
-/// Possible errors when running a bulk rename.
-#[derive(Debug)]
-pub enum Error {
-    /// The provided path is not a directory.
-    NotDirError,
-    /// The provided regular expression is invalid.
-    RegexError(regex::Error),
-}
-
-/// Strategies for handling filename collisions.
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
-pub enum CollisionStrategy {
-    /// Skip the rename if the destination already exists.
-    #[default]
-    Skip,
-    /// Overwrite the destination if it already exists.
-    Overwrite,
-    /// Append a suffix to the filename if the destination already exists.
-    Suffix,
-}
-
-impl FromStr for CollisionStrategy {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s.to_lowercase().as_str() {
-            "skip" => Ok(CollisionStrategy::Skip),
-            "overwrite" => Ok(CollisionStrategy::Overwrite),
-            "suffix" => Ok(CollisionStrategy::Suffix),
-            _ => Err(format!(
-                "invalid collision strategy: {}. Valid values are: skip, overwrite, suffix",
-                s
-            )),
-        }
-    }
-}
-
-impl fmt::Display for CollisionStrategy {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let s = match self {
-            CollisionStrategy::Skip => "skip",
-            CollisionStrategy::Overwrite => "overwrite",
-            CollisionStrategy::Suffix => "suffix",
-        };
-        write!(f, "{}", s)
-    }
-}
-
-/// A callback for the bulk rename.
-pub trait Callback: Sync + Send {
-    /// Called when a file rename operation was successful.
-    fn on_ok(&self, old_path: &Path, new_path: &Path);
-
-    /// Called when a file rename operation failed.
-    fn on_error(&self, old_path: &Path, new_path: &Path, error: io::Error);
-}
-
-/// A no-op `Callback`.
-pub struct NoOpCallback {}
-
-impl Default for NoOpCallback {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl NoOpCallback {
-    /// Creates a new no-op `Callback`.
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-
-impl Callback for NoOpCallback {
-    fn on_ok(&self, _old_path: &Path, _new_path: &Path) {}
-
-    fn on_error(&self, _old_path: &Path, _new_path: &Path, _error: io::Error) {}
-}
-
 impl<'a> BulkRename<'a> {
     /// Creates a new `BulkRename`.
     pub fn new(dir: &'a Path, regex: &'a str, replacement: &'a str) -> Result<Self, Error> {
         if !dir.is_dir() {
             return Err(Error::NotDirError);
         }
-        let regex = Regex::new(regex).map_err(Error::RegexError)?;
+        let regex = Regex::new(regex)?;
         Ok(Self {
             dir,
             regex,
@@ -235,9 +157,6 @@ impl<'a> BulkRename<'a> {
         }
         #[cfg(windows)]
         {
-            // Windows has a different way, but for now we can just check if they are the same path
-            // since Windows is case-insensitive usually.
-            // But this is just a fallback.
             if let (Ok(p1_canonical), Ok(p2_canonical)) = (p1.canonicalize(), p2.canonicalize()) {
                 return p1_canonical == p2_canonical;
             }

@@ -2,10 +2,7 @@
 extern crate bmv;
 extern crate clap;
 
-use bmv::bulk_rename::BulkRename;
-use bmv::bulk_rename::Callback;
-use bmv::bulk_rename::CollisionStrategy;
-use bmv::bulk_rename::Error;
+use bmv::{BulkRename, Callback, CollisionStrategy, Error};
 use clap::Parser;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -104,6 +101,9 @@ fn main() {
             }
             Error::RegexError(error) => {
                 eprintln!("Error: {} is not a valid regex: '{}'", args.regex, error)
+            }
+            Error::IoError { path, source } => {
+                eprintln!("Error: I/O error at {}: {}", path.display(), source)
             }
         },
     }

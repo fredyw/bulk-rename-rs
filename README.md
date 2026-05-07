@@ -36,6 +36,9 @@ Options:
 #### API
 
 ```rust
+use bmv::{BulkRename, Callback};
+use std::path::Path;
+
 struct SimpleCallback {}
 
 impl SimpleCallback {
@@ -59,7 +62,8 @@ impl Callback for SimpleCallback {
     }
 }
 
-match BulkRename::new(Path::new("tmp"), r"(test)_(\d+).txt", r"${2}_${1}.txt") {
+let dir = Path::new("tmp");
+match BulkRename::new(dir, r"(test)_(\d+).txt", r"${2}_${1}.txt") {
     Ok(br) => {
         br.bulk_rename(SimpleCallback::new());
     }

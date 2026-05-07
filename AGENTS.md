@@ -23,7 +23,7 @@ Before submitting any change, ensure all tests pass:
 
 ## 3. Documentation
 - Update `README.md` if you add new CLI arguments or change existing functionality.
-- Use docstrings (`///`) for public functions and structs in `src/lib.rs` and `src/bulk_rename.rs`.
+- Use docstrings (`///`) for public functions and structs in all `src/*.rs` files.
 
 ## 4. Commit Messages
 - **Structure**: Every commit must have a clear title and a descriptive body.
@@ -39,8 +39,11 @@ Since `bmv` is a bulk file renaming tool:
 - **Dry Run**: Always consider how changes affect the "dry run" functionality to ensure users can preview changes safely.
 
 ## 6. Repository Structure
-- `src/lib.rs`: Main library entry point (module declarations).
-- `src/bulk_rename.rs`: Core logic for finding and renaming files.
+- `src/lib.rs`: Main library entry point and re-exports.
+- `src/engine.rs`: Core execution logic for finding and renaming files.
+- `src/models.rs`: Core data structures (e.g., `CollisionStrategy`).
+- `src/error.rs`: Custom error types and handling.
+- `src/callback.rs`: `Callback` trait and standard implementations.
 - `src/main.rs`: CLI entry point and argument parsing using `clap`.
 - `tests/`: Integration tests for filesystem operations and CLI logic.
 
