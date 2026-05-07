@@ -51,6 +51,10 @@ struct Args {
     /// Use case-insensitive matching.
     #[arg(short = 'I', long, default_value_t = false)]
     ignore_case: bool,
+
+    /// Filter files by extension (comma-separated).
+    #[arg(short = 'e', long, value_delimiter = ',')]
+    ext: Vec<String>,
 }
 
 /// A callback implementation for the CLI.
@@ -102,7 +106,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let bulk_rename = BulkRename::new(path, regex, replacement)?;
     let bulk_rename = bulk_rename
         .with_collision_strategy(args.collision)
-        .with_case_insensitive(args.ignore_case)?;
+        .with_case_insensitive(args.ignore_case)?
+        .with_extensions(args.ext.into_iter().collect());
 
     if args.dry_run {
         let targets = Mutex::new(HashSet::new());

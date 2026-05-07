@@ -317,3 +317,30 @@ fn test_cli_ignore_case() {
     assert!(dir.path().join("file_1.txt").exists());
     assert!(!file1.exists());
 }
+
+#[test]
+fn test_cli_extension_filter() {
+    let dir = tempdir().unwrap();
+    let file1 = dir.path().join("test_1.txt");
+    let file2 = dir.path().join("test_1.jpg");
+    File::create(&file1).unwrap();
+    File::create(&file2).unwrap();
+
+    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    cmd.arg("-f")
+        .arg(dir.path())
+        .arg("-r")
+        .arg("test")
+        .arg("-p")
+        .arg("renamed")
+        .arg("-e")
+        .arg("txt")
+        .arg("--history-file")
+        .arg(dir.path().join("history.json"));
+
+    cmd.assert().success();
+
+    assert!(dir.path().join("renamed_1.txt").exists());
+    assert!(file2.exists());
+    assert!(!file1.exists());
+}

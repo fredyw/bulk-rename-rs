@@ -98,3 +98,25 @@ fn bulk_rename_ignore_case() {
 
     fs::remove_dir_all(tmp_path).unwrap();
 }
+
+#[test]
+fn bulk_rename_extension_filter() {
+    let tmp_path = Path::new("tmp_ext");
+    fs::create_dir_all(tmp_path).unwrap();
+    File::create("tmp_ext/test.txt").unwrap();
+    File::create("tmp_ext/test.jpg").unwrap();
+
+    let mut exts = std::collections::HashSet::new();
+    exts.insert("txt".to_string());
+
+    let bulk_rename = BulkRename::new(tmp_path, r"test", "renamed")
+        .unwrap()
+        .with_extensions(exts);
+    bulk_rename.bulk_rename(NoOpCallback::new());
+
+    assert!(Path::new("tmp_ext/renamed.txt").exists());
+    assert!(Path::new("tmp_ext/test.jpg").exists());
+    assert!(!Path::new("tmp_ext/test.txt").exists());
+
+    fs::remove_dir_all(tmp_path).unwrap();
+}

@@ -21,6 +21,8 @@ pub struct BulkRename<'a> {
     replacement: &'a str,
     /// The strategy for handling collisions.
     collision_strategy: CollisionStrategy,
+    /// The extensions to filter by.
+    extensions: HashSet<String>,
 }
 
 impl<'a> BulkRename<'a> {
@@ -35,6 +37,7 @@ impl<'a> BulkRename<'a> {
             regex,
             replacement,
             collision_strategy: CollisionStrategy::default(),
+            extensions: HashSet::new(),
         })
     }
 
@@ -55,6 +58,12 @@ impl<'a> BulkRename<'a> {
         Ok(self)
     }
 
+    /// Sets the extensions to filter by.
+    pub fn with_extensions(mut self, extensions: HashSet<String>) -> Self {
+        self.extensions = extensions;
+        self
+    }
+
     /// Executes a function `f` for any files that match the specified regex.
     ///
     /// The function `f` is called with the original path and the calculated new path.
@@ -68,6 +77,17 @@ impl<'a> BulkRename<'a> {
             .into_iter()
             .filter_map(|entry| entry.ok())
             .filter(|entry| entry.file_type().is_file())
+            .filter(|entry| {
+                if self.extensions.is_empty() {
+                    return true;
+                }
+                entry
+                    .path()
+                    .extension()
+                    .and_then(|ext| ext.to_str())
+                    .map(|ext| self.extensions.contains(ext))
+                    .unwrap_or(false)
+            })
             .par_bridge()
             .for_each(|entry| {
                 let path = entry.path();
@@ -93,6 +113,17 @@ impl<'a> BulkRename<'a> {
             .into_iter()
             .filter_map(|entry| entry.ok())
             .filter(|entry| entry.file_type().is_file())
+            .filter(|entry| {
+                if self.extensions.is_empty() {
+                    return true;
+                }
+                entry
+                    .path()
+                    .extension()
+                    .and_then(|ext| ext.to_str())
+                    .map(|ext| self.extensions.contains(ext))
+                    .unwrap_or(false)
+            })
             .for_each(|entry| {
                 let path = entry.path();
                 if let Some(old_file_name) = path.file_name().and_then(|n| n.to_str()) {
