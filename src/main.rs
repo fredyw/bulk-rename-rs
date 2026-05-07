@@ -4,9 +4,12 @@ extern crate clap;
 
 use bmv::bulk_rename::BulkRename;
 use bmv::bulk_rename::Callback;
+use bmv::bulk_rename::CollisionStrategy;
 use bmv::bulk_rename::Error;
 use clap::Parser;
+use std::collections::HashSet;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -30,6 +33,10 @@ struct Args {
     /// Run in quiet mode.
     #[arg(short = 'q', long, default_value_t = false)]
     quiet: bool,
+
+    /// Set the collision strategy.
+    #[arg(short = 'c', long, default_value = "skip", value_parser = ["skip", "overwrite", "suffix"])]
+    collision: CollisionStrategy,
 }
 
 /// A callback implementation for the CLI.
@@ -71,9 +78,21 @@ fn main() {
     let bulk_rename = BulkRename::new(path, &args.regex, &args.replacement);
     match bulk_rename {
         Ok(bulk_rename) => {
+            let bulk_rename = bulk_rename.with_collision_strategy(args.collision);
             if args.dry_run {
+                let targets = Mutex::new(HashSet::new());
                 bulk_rename.bulk_rename_fn(|old_path, new_path| {
-                    println!("Dry-run: {} --> {}", old_path.display(), new_path.display());
+                    if let Some(final_path) =
+                        bulk_rename.resolve_collision(old_path, new_path, &targets)
+                    {
+                        println!(
+                            "Dry-run: {} --> {}",
+                            old_path.display(),
+                            final_path.display()
+                        );
+                    } else {
+                        println!("Dry-run: {} (skipped due to collision)", old_path.display());
+                    }
                 })
             } else {
                 bulk_rename.bulk_rename(CliCallback::new(args.quiet))
