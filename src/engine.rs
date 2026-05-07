@@ -23,6 +23,10 @@ pub struct BulkRename<'a> {
     collision_strategy: CollisionStrategy,
     /// The extensions to filter by.
     extensions: HashSet<String>,
+    /// The patterns to include.
+    include_patterns: Vec<Regex>,
+    /// The patterns to exclude.
+    exclude_patterns: Vec<Regex>,
 }
 
 impl<'a> BulkRename<'a> {
@@ -38,6 +42,8 @@ impl<'a> BulkRename<'a> {
             replacement,
             collision_strategy: CollisionStrategy::default(),
             extensions: HashSet::new(),
+            include_patterns: Vec::new(),
+            exclude_patterns: Vec::new(),
         })
     }
 
@@ -64,6 +70,24 @@ impl<'a> BulkRename<'a> {
         self
     }
 
+    /// Sets the patterns to include.
+    pub fn with_include_patterns(mut self, patterns: Vec<String>) -> Result<Self, Error> {
+        self.include_patterns = patterns
+            .into_iter()
+            .map(|p| Regex::new(&p))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(self)
+    }
+
+    /// Sets the patterns to exclude.
+    pub fn with_exclude_patterns(mut self, patterns: Vec<String>) -> Result<Self, Error> {
+        self.exclude_patterns = patterns
+            .into_iter()
+            .map(|p| Regex::new(&p))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(self)
+    }
+
     /// Executes a function `f` for any files that match the specified regex.
     ///
     /// The function `f` is called with the original path and the calculated new path.
@@ -87,6 +111,26 @@ impl<'a> BulkRename<'a> {
                     .and_then(|ext| ext.to_str())
                     .map(|ext| self.extensions.contains(ext))
                     .unwrap_or(false)
+            })
+            .filter(|entry| {
+                let path_str = entry.path().to_string_lossy();
+                if !self.exclude_patterns.is_empty()
+                    && self
+                        .exclude_patterns
+                        .iter()
+                        .any(|re| re.is_match(&path_str))
+                {
+                    return false;
+                }
+                if !self.include_patterns.is_empty()
+                    && !self
+                        .include_patterns
+                        .iter()
+                        .any(|re| re.is_match(&path_str))
+                {
+                    return false;
+                }
+                true
             })
             .par_bridge()
             .for_each(|entry| {
@@ -123,6 +167,26 @@ impl<'a> BulkRename<'a> {
                     .and_then(|ext| ext.to_str())
                     .map(|ext| self.extensions.contains(ext))
                     .unwrap_or(false)
+            })
+            .filter(|entry| {
+                let path_str = entry.path().to_string_lossy();
+                if !self.exclude_patterns.is_empty()
+                    && self
+                        .exclude_patterns
+                        .iter()
+                        .any(|re| re.is_match(&path_str))
+                {
+                    return false;
+                }
+                if !self.include_patterns.is_empty()
+                    && !self
+                        .include_patterns
+                        .iter()
+                        .any(|re| re.is_match(&path_str))
+                {
+                    return false;
+                }
+                true
             })
             .for_each(|entry| {
                 let path = entry.path();

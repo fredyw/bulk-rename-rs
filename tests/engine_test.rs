@@ -120,3 +120,26 @@ fn bulk_rename_extension_filter() {
 
     fs::remove_dir_all(tmp_path).unwrap();
 }
+
+#[test]
+fn bulk_rename_include_exclude() {
+    let tmp_path = Path::new("tmp_inc_exc");
+    fs::create_dir_all(tmp_path).unwrap();
+    File::create("tmp_inc_exc/include_me.txt").unwrap();
+    File::create("tmp_inc_exc/exclude_me.txt").unwrap();
+    File::create("tmp_inc_exc/other.txt").unwrap();
+
+    let bulk_rename = BulkRename::new(tmp_path, r"(.*)_me", r"renamed_$1")
+        .unwrap()
+        .with_include_patterns(vec![".*_me".to_string()])
+        .unwrap()
+        .with_exclude_patterns(vec!["exclude.*".to_string()])
+        .unwrap();
+    bulk_rename.bulk_rename(NoOpCallback::new());
+
+    assert!(Path::new("tmp_inc_exc/renamed_include.txt").exists());
+    assert!(Path::new("tmp_inc_exc/exclude_me.txt").exists());
+    assert!(Path::new("tmp_inc_exc/other.txt").exists());
+
+    fs::remove_dir_all(tmp_path).unwrap();
+}

@@ -34,11 +34,16 @@ Options:
   -i, --interactive                Prompt for confirmation before each rename
   -I, --ignore-case                Use case-insensitive matching
   -e, --ext <EXT>                  Filter files by extension (comma-separated)
+      --include <INCLUDE>          Include only files matching these patterns (comma-separated)
+      --exclude <EXCLUDE>          Exclude files matching these patterns (comma-separated)
   -c, --collision <STRATEGY>       Set the collision strategy [default: skip] [possible values: skip, overwrite, suffix]
       --undo                       Undo the previous rename operation
       --history-file <PATH>        Set the history file path [default: .bmv-undo.json]
   -h, --help                       Print help
   -V, --version                    Print version
+
+> [!NOTE]
+> **Precedence:** `exclude` patterns have the highest priority. If a file matches both an `include` and an `exclude` pattern, it will be **excluded**.
 ```
 
 #### API

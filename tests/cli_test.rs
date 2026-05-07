@@ -344,3 +344,32 @@ fn test_cli_extension_filter() {
     assert!(file2.exists());
     assert!(!file1.exists());
 }
+
+#[test]
+fn test_cli_include_exclude() {
+    let dir = tempdir().unwrap();
+    let file1 = dir.path().join("include_1.txt");
+    let file2 = dir.path().join("exclude_1.txt");
+    File::create(&file1).unwrap();
+    File::create(&file2).unwrap();
+
+    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    cmd.arg("-f")
+        .arg(dir.path())
+        .arg("-r")
+        .arg("(\\w+)_1.txt")
+        .arg("-p")
+        .arg("renamed_$1.txt")
+        .arg("--include")
+        .arg("include.*")
+        .arg("--exclude")
+        .arg("exclude.*")
+        .arg("--history-file")
+        .arg(dir.path().join("history.json"));
+
+    cmd.assert().success();
+
+    assert!(dir.path().join("renamed_include.txt").exists());
+    assert!(file2.exists());
+    assert!(!file1.exists());
+}
