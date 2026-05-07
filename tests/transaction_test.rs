@@ -25,33 +25,31 @@ fn test_transaction_continue() {
 
     // Let's use a custom callback to track results
     struct TestCallback {
-        pub ok_count: std::sync::atomic::AtomicUsize,
-        pub err_count: std::sync::atomic::AtomicUsize,
+        pub ok_count: usize,
+        pub err_count: usize,
     }
-    impl bulk_rename_rs::Callback for &TestCallback {
-        fn on_ok(&self, _: &Path, _: &Path) {
-            self.ok_count
-                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+    impl bulk_rename_rs::Callback for TestCallback {
+        fn on_ok(&mut self, _: &Path, _: &Path) {
+            self.ok_count += 1;
         }
-        fn on_error(&self, _: &Path, _: &Path, _: std::io::Error) {
-            self.err_count
-                .fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        fn on_error(&mut self, _: &Path, _: &Path, _: std::io::Error) {
+            self.err_count += 1;
         }
 
-        fn on_rollback_ok(&self, _: &Path, _: &Path) {}
+        fn on_rollback_ok(&mut self, _: &Path, _: &Path) {}
 
-        fn on_rollback_error(&self, _: &Path, _: &Path, _: std::io::Error) {}
+        fn on_rollback_error(&mut self, _: &Path, _: &Path, _: std::io::Error) {}
     }
 
-    let cb = TestCallback {
-        ok_count: std::sync::atomic::AtomicUsize::new(0),
-        err_count: std::sync::atomic::AtomicUsize::new(0),
+    let mut cb = TestCallback {
+        ok_count: 0,
+        err_count: 0,
     };
 
-    bulk_rename.execute(&cb);
+    bulk_rename.execute(&mut cb);
 
-    assert_eq!(cb.ok_count.load(std::sync::atomic::Ordering::SeqCst), 1);
-    assert_eq!(cb.err_count.load(std::sync::atomic::Ordering::SeqCst), 1);
+    assert_eq!(cb.ok_count, 1);
+    assert_eq!(cb.err_count, 1);
 
     assert!(tmp_path.join("success1.txt").exists());
     assert!(!tmp_path.join("file1.txt").exists());

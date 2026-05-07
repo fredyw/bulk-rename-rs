@@ -10,7 +10,6 @@ use clap::{Parser, ValueEnum};
 use std::collections::HashSet;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -118,13 +117,13 @@ impl CliCallback {
 }
 
 impl Callback for CliCallback {
-    fn on_ok(&self, old_path: &Path, new_path: &Path) {
+    fn on_ok(&mut self, old_path: &Path, new_path: &Path) {
         if !self.quiet {
             println!("OK: {} --> {}", old_path.display(), new_path.display());
         }
     }
 
-    fn on_error(&self, old_path: &Path, new_path: &Path, error: std::io::Error) {
+    fn on_error(&mut self, old_path: &Path, new_path: &Path, error: std::io::Error) {
         if !self.quiet {
             eprintln!(
                 "Error: Unable to rename {} to {}: {}",
@@ -135,7 +134,7 @@ impl Callback for CliCallback {
         }
     }
 
-    fn on_rollback_ok(&self, old_path: &Path, new_path: &Path) {
+    fn on_rollback_ok(&mut self, old_path: &Path, new_path: &Path) {
         if !self.quiet {
             println!(
                 "Rollback: {} --> {}",
@@ -145,7 +144,7 @@ impl Callback for CliCallback {
         }
     }
 
-    fn on_rollback_error(&self, old_path: &Path, new_path: &Path, error: std::io::Error) {
+    fn on_rollback_error(&mut self, old_path: &Path, new_path: &Path, error: std::io::Error) {
         if !self.quiet {
             eprintln!(
                 "Rollback Error: Unable to rename {} back to {}: {}",
@@ -188,9 +187,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .with_python_file(args.python_file);
 
     if args.dry_run {
-        let targets = Mutex::new(HashSet::new());
+        let mut targets = HashSet::new();
         bulk_rename.run(|old_path, new_path| {
-            if let Some(final_path) = bulk_rename.resolve_collision(old_path, new_path, &targets) {
+            if let Some(final_path) =
+                bulk_rename.resolve_collision(old_path, new_path, &mut targets)
+            {
                 println!(
                     "Dry-run: {} --> {}",
                     old_path.display(),
@@ -201,12 +202,14 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
         });
     } else if args.interactive {
-        let targets = Mutex::new(HashSet::new());
-        let history = Mutex::new(Vec::new());
-        let callback = HistoryCallback::new(CliCallback::new(args.quiet), &history);
+        let mut targets = HashSet::new();
+        let mut history = Vec::new();
+        let mut callback = HistoryCallback::new(CliCallback::new(args.quiet), &mut history);
 
-        bulk_rename.run_seq(|old_path, new_path| {
-            if let Some(final_path) = bulk_rename.resolve_collision(old_path, new_path, &targets) {
+        bulk_rename.run(|old_path, new_path| {
+            if let Some(final_path) =
+                bulk_rename.resolve_collision(old_path, new_path, &mut targets)
+            {
                 if confirm(old_path, &final_path) {
                     match std::fs::rename(old_path, &final_path) {
                         Ok(_) => callback.on_ok(old_path, &final_path),
@@ -216,13 +219,13 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
         });
 
-        save_history(&args.history_file, history.into_inner().unwrap())?;
+        save_history(&args.history_file, history)?;
     } else {
-        let history = Mutex::new(Vec::new());
-        let callback = HistoryCallback::new(CliCallback::new(args.quiet), &history);
+        let mut history = Vec::new();
+        let callback = HistoryCallback::new(CliCallback::new(args.quiet), &mut history);
         bulk_rename.execute(callback);
 
-        save_history(&args.history_file, history.into_inner().unwrap())?;
+        save_history(&args.history_file, history)?;
     }
 
     Ok(())

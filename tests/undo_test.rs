@@ -1,6 +1,5 @@
 use bulk_rename_rs::{BulkRename, CollisionStrategy, HistoryCallback, NoOpCallback, RenameHistory};
 use std::fs::File;
-use std::sync::Mutex;
 use tempfile::tempdir;
 
 #[test]
@@ -17,18 +16,17 @@ fn test_history_collection() {
         .unwrap()
         .with_collision_strategy(CollisionStrategy::Skip);
 
-    let history_records = Mutex::new(Vec::new());
-    let callback = HistoryCallback::new(NoOpCallback::new(), &history_records);
+    let mut history_records = Vec::new();
+    let callback = HistoryCallback::new(NoOpCallback::new(), &mut history_records);
 
     bulk_rename.execute(callback);
 
-    let records = history_records.into_inner().unwrap();
-    assert_eq!(records.len(), 2);
+    assert_eq!(history_records.len(), 2);
 
-    let r1 = records.iter().find(|r| r.old_path == f1).unwrap();
+    let r1 = history_records.iter().find(|r| r.old_path == f1).unwrap();
     assert_eq!(r1.new_path, root.join("renamed_1.txt"));
 
-    let r2 = records.iter().find(|r| r.old_path == f2).unwrap();
+    let r2 = history_records.iter().find(|r| r.old_path == f2).unwrap();
     assert_eq!(r2.new_path, root.join("renamed_2.txt"));
 }
 
@@ -46,8 +44,8 @@ fn test_bulk_rename_undo() {
         .unwrap()
         .with_collision_strategy(CollisionStrategy::Skip);
 
-    let history_records = Mutex::new(Vec::new());
-    let callback = HistoryCallback::new(NoOpCallback::new(), &history_records);
+    let mut history_records = Vec::new();
+    let callback = HistoryCallback::new(NoOpCallback::new(), &mut history_records);
 
     // Perform rename
     bulk_rename.execute(callback);
@@ -60,7 +58,7 @@ fn test_bulk_rename_undo() {
     assert!(!f2.exists());
 
     let history = RenameHistory {
-        records: history_records.into_inner().unwrap(),
+        records: history_records,
     };
 
     // Perform undo
@@ -88,8 +86,8 @@ fn test_undo_with_collision_suffix() {
         .unwrap()
         .with_collision_strategy(CollisionStrategy::Suffix);
 
-    let history_records = Mutex::new(Vec::new());
-    let callback = HistoryCallback::new(NoOpCallback::new(), &history_records);
+    let mut history_records = Vec::new();
+    let callback = HistoryCallback::new(NoOpCallback::new(), &mut history_records);
 
     bulk_rename.execute(callback);
 
@@ -99,7 +97,7 @@ fn test_undo_with_collision_suffix() {
     assert!(target_suffix.exists());
 
     let history = RenameHistory {
-        records: history_records.into_inner().unwrap(),
+        records: history_records,
     };
 
     // Perform undo

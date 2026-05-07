@@ -175,7 +175,7 @@ fn bulk_rename_counter() {
         .unwrap()
         .with_counter_start(10);
     // Use sequential to ensure deterministic order for test assertion
-    bulk_rename.run_seq(|old, new| {
+    bulk_rename.run(|old, new| {
         fs::rename(old, new).unwrap();
     });
 
@@ -195,7 +195,7 @@ fn bulk_rename_counter_padding() {
 
     // Let's do real renames.
     let mut names = Vec::new();
-    bulk_rename.run_seq(|_, new| {
+    bulk_rename.run(|_, new| {
         names.push(new.file_name().unwrap().to_string_lossy().to_string());
     });
 
@@ -213,7 +213,7 @@ fn bulk_rename_date() {
     let bulk_rename = BulkRename::new(tmp_path, r"file\.txt", r"file_{date}.txt").unwrap();
 
     let mut names = Vec::new();
-    bulk_rename.run_seq(|_, new| {
+    bulk_rename.run(|_, new| {
         names.push(new.file_name().unwrap().to_string_lossy().to_string());
     });
 
@@ -237,7 +237,7 @@ fn bulk_rename_date_custom() {
     let bulk_rename = BulkRename::new(tmp_path, r"file\.txt", r"file_{date:%Y}.txt").unwrap();
 
     let mut names = Vec::new();
-    bulk_rename.run_seq(|_, new| {
+    bulk_rename.run(|_, new| {
         names.push(new.file_name().unwrap().to_string_lossy().to_string());
     });
 
@@ -263,7 +263,7 @@ fn bulk_rename_transformations() {
     .unwrap();
 
     let mut names = Vec::new();
-    bulk_rename.run_seq(|_, new| {
+    bulk_rename.run(|_, new| {
         names.push(new.file_name().unwrap().to_string_lossy().to_string());
     });
 
@@ -281,7 +281,7 @@ fn bulk_rename_transformations_nested() {
     let bulk_rename = BulkRename::new(tmp_path, r"(test)\.txt", r"{u:{l:$1}}.txt").unwrap();
 
     let mut names = Vec::new();
-    bulk_rename.run_seq(|_, new| {
+    bulk_rename.run(|_, new| {
         names.push(new.file_name().unwrap().to_string_lossy().to_string());
     });
 

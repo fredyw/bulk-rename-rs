@@ -2,13 +2,11 @@ use crate::callback::Callback;
 use crate::error::Error;
 use crate::models::{CollisionStrategy, RenameHistory, SymlinkStrategy, TransactionStrategy};
 use chrono::{DateTime, Local};
-use rayon::prelude::*;
 use regex::Regex;
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Mutex;
 use walkdir::WalkDir;
 
 /// A bulk rename operation.
@@ -165,29 +163,16 @@ impl<'a> BulkRename<'a> {
     ///
     /// The function `f` is called with the original path and the calculated new path.
     /// It will not be called if the file name remains unchanged after replacement.
-    /// This operation is performed in parallel across multiple threads.
-    pub fn run<F>(&self, f: F)
+    pub fn run<F>(&self, mut f: F)
     where
-        F: Fn(&Path, &Path) + Sync + Send,
+        F: FnMut(&Path, &Path),
     {
         let mut plan = self.generate_plan();
         // Sort by depth descending to ensure bottom-up processing.
         plan.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
 
-        let mut i = 0;
-        while i < plan.len() {
-            let depth = plan[i].0;
-            let mut j = i + 1;
-            while j < plan.len() && plan[j].0 == depth {
-                j += 1;
-            }
-
-            // All items from i to j have the same depth and can be safely processed in parallel.
-            plan[i..j].into_par_iter().for_each(|(_, old, new)| {
-                f(old, new);
-            });
-
-            i = j;
+        for (_, old, new) in plan {
+            f(&old, &new);
         }
     }
 
@@ -394,79 +379,49 @@ impl<'a> BulkRename<'a> {
         })
     }
 
-    /// Sequential version of `run`.
-    pub fn run_seq<F>(&self, mut f: F)
-    where
-        F: FnMut(&Path, &Path),
-    {
-        let mut plan = self.generate_plan();
-        // Sort by depth descending to ensure bottom-up processing.
-        plan.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
-
-        for (_, old, new) in plan {
-            f(&old, &new);
-        }
-    }
-
     /// Performs the bulk rename operation, notifying the provided `callback` of each outcome.
     ///
-    /// Files are renamed in place. This operation is performed in parallel across multiple threads,
-    /// unless the transaction strategy is Abort or Rollback, in which case it is performed sequentially.
-    pub fn execute(&self, callback: impl Callback) {
-        let targets = Mutex::new(HashSet::new());
+    /// Files are renamed in place.
+    pub fn execute(&self, mut callback: impl Callback) {
+        let mut targets = HashSet::new();
+        let mut successful_renames = Vec::new();
+        let mut failed = false;
 
-        if self.transaction_strategy == TransactionStrategy::Continue {
-            self.run(|old_path, new_path| {
-                let final_path = match self.resolve_collision(old_path, new_path, &targets) {
-                    Some(path) => path,
-                    None => return, // Skip
-                };
+        self.run(|old_path, new_path| {
+            if failed && self.transaction_strategy != TransactionStrategy::Continue {
+                return;
+            }
 
-                match fs::rename(old_path, &final_path) {
-                    Ok(_) => {
-                        callback.on_ok(old_path, &final_path);
-                    }
-                    Err(error) => {
-                        callback.on_error(old_path, &final_path, error);
-                    }
-                }
-            });
-        } else {
-            let mut successful_renames = Vec::new();
-            let mut failed = false;
+            let final_path = match self.resolve_collision(old_path, new_path, &mut targets) {
+                Some(path) => path,
+                None => return, // Skip
+            };
 
-            self.run_seq(|old_path, new_path| {
-                if failed {
-                    return;
-                }
-
-                let final_path = match self.resolve_collision(old_path, new_path, &targets) {
-                    Some(path) => path,
-                    None => return, // Skip
-                };
-
-                match fs::rename(old_path, &final_path) {
-                    Ok(_) => {
-                        callback.on_ok(old_path, &final_path);
+            match fs::rename(old_path, &final_path) {
+                Ok(_) => {
+                    callback.on_ok(old_path, &final_path);
+                    if self.transaction_strategy != TransactionStrategy::Continue {
                         successful_renames.push((old_path.to_path_buf(), final_path));
                     }
-                    Err(error) => {
-                        callback.on_error(old_path, &final_path, error);
+                }
+                Err(error) => {
+                    callback.on_error(old_path, &final_path, error);
+                    if self.transaction_strategy != TransactionStrategy::Continue {
                         failed = true;
                     }
                 }
-            });
+            }
+        });
 
-            if failed && self.transaction_strategy == TransactionStrategy::Rollback {
-                // Perform rollback
-                for (old, new) in successful_renames.into_iter().rev() {
-                    match fs::rename(&new, &old) {
-                        Ok(_) => {
-                            callback.on_rollback_ok(&new, &old);
-                        }
-                        Err(error) => {
-                            callback.on_rollback_error(&new, &old, error);
-                        }
+        if failed && self.transaction_strategy == TransactionStrategy::Rollback {
+            // Perform rollback
+            for (old, new) in successful_renames.into_iter().rev() {
+                match fs::rename(&new, &old) {
+                    Ok(_) => {
+                        callback.on_rollback_ok(&new, &old);
+                    }
+                    Err(error) => {
+                        callback.on_rollback_error(&new, &old, error);
                     }
                 }
             }
@@ -480,7 +435,7 @@ impl<'a> BulkRename<'a> {
         &self,
         old_path: &Path,
         new_path: &Path,
-        targets: &Mutex<HashSet<PathBuf>>,
+        targets: &mut HashSet<PathBuf>,
     ) -> Option<PathBuf> {
         let mut final_path = new_path.to_path_buf();
 
@@ -489,11 +444,10 @@ impl<'a> BulkRename<'a> {
                 if final_path.exists() && !Self::is_same_file(old_path, &final_path) {
                     return None;
                 }
-                let mut t = targets.lock().unwrap();
-                if t.contains(&final_path) {
+                if targets.contains(&final_path) {
                     return None;
                 }
-                t.insert(final_path.clone());
+                targets.insert(final_path.clone());
             }
             CollisionStrategy::Overwrite => {
                 // Do nothing, just return new_path.
@@ -505,13 +459,11 @@ impl<'a> BulkRename<'a> {
                 let ext = new_path.extension().and_then(|e| e.to_str());
 
                 loop {
-                    let mut t = targets.lock().unwrap();
                     let exists = final_path.exists() && !Self::is_same_file(old_path, &final_path);
-                    if !exists && !t.contains(&final_path) {
-                        t.insert(final_path.clone());
+                    if !exists && !targets.contains(&final_path) {
+                        targets.insert(final_path.clone());
                         break;
                     }
-                    drop(t);
 
                     let new_name = match ext {
                         Some(ext) => format!("{} ({}).{}", stem, i, ext),
@@ -629,8 +581,8 @@ impl<'a> BulkRename<'a> {
     }
 
     /// Undoes the renames specified in the given `history`.
-    pub fn undo(history: &RenameHistory, callback: impl Callback) {
-        history.records.par_iter().for_each(|record| {
+    pub fn undo(history: &RenameHistory, mut callback: impl Callback) {
+        for record in &history.records {
             match fs::rename(&record.new_path, &record.old_path) {
                 Ok(_) => {
                     callback.on_ok(&record.new_path, &record.old_path);
@@ -639,7 +591,7 @@ impl<'a> BulkRename<'a> {
                     callback.on_error(&record.new_path, &record.old_path, error);
                 }
             }
-        });
+        }
     }
 }
 
@@ -717,9 +669,9 @@ mod tests {
         File::create(&new_path).unwrap();
 
         let bulk_rename = BulkRename::new(dir.path(), ".*", "replacement").unwrap();
-        let targets = Mutex::new(HashSet::new());
+        let mut targets = HashSet::new();
 
-        let result = bulk_rename.resolve_collision(&old_path, &new_path, &targets);
+        let result = bulk_rename.resolve_collision(&old_path, &new_path, &mut targets);
         assert!(result.is_none());
     }
 
@@ -733,9 +685,9 @@ mod tests {
         let bulk_rename = BulkRename::new(dir.path(), ".*", "replacement")
             .unwrap()
             .with_collision_strategy(CollisionStrategy::Overwrite);
-        let targets = Mutex::new(HashSet::new());
+        let mut targets = HashSet::new();
 
-        let result = bulk_rename.resolve_collision(&old_path, &new_path, &targets);
+        let result = bulk_rename.resolve_collision(&old_path, &new_path, &mut targets);
         assert_eq!(result.unwrap(), new_path);
     }
 
@@ -749,9 +701,9 @@ mod tests {
         let bulk_rename = BulkRename::new(dir.path(), ".*", "replacement")
             .unwrap()
             .with_collision_strategy(CollisionStrategy::Suffix);
-        let targets = Mutex::new(HashSet::new());
+        let mut targets = HashSet::new();
 
-        let result = bulk_rename.resolve_collision(&old_path, &new_path, &targets);
+        let result = bulk_rename.resolve_collision(&old_path, &new_path, &mut targets);
         assert_eq!(result.unwrap(), dir.path().join("new (1).txt"));
     }
 
