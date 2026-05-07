@@ -16,6 +16,9 @@ A powerful command-line tool for bulk renaming files using regular expressions, 
 - [Usage](#usage)
     - [CLI Reference](#cli-reference)
     - [Library API](#library-api)
+        - [Basic Usage](#basic-usage)
+        - [Custom Callback & Transactional Rollback](#custom-callback--transactional-rollback)
+        - [Dry Run (Plan Generation)](#dry-run-plan-generation)
 - [Features](#features)
     - [Dynamic Variables](#dynamic-variables)
     - [Text Transformations](#text-transformations)
@@ -131,21 +134,84 @@ Options:
 
 ### Library API
 
-`bulk-rename-rs` can be integrated into your Rust projects as a library:
+`bulk-rename-rs` can be integrated into your Rust projects. Add it to your `Cargo.toml`:
 
+```toml
+[dependencies]
+bulk-rename-rs = "..." # See crates.io badge above for the latest version
+```
+
+#### Basic Usage
 ```rust
-use bulk_rename_rs::{BulkRename, Callback, NoOpCallback};
+use bulk_rename_rs::{BulkRename, NoOpCallback};
 use std::path::Path;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let bulk_rename = BulkRename::new(
-        Path::new("./files"), 
-        r"old_(.*)\.txt", 
-        r"new_$1.txt"
-    ).unwrap();
+        Path::new("./photos"), 
+        r"IMG_(\d+)", 
+        r"Holiday_$1"
+    )?
+    .with_rename_files(true)
+    .with_rename_dirs(false);
     
-    // Execute renames
+    // Execute with no output
     bulk_rename.execute(NoOpCallback::new());
+    Ok(())
+}
+```
+
+#### Custom Callback & Transactional Rollback
+You can implement the `Callback` trait to track progress or log errors. This example also demonstrates the `rollback` strategy, which reverts changes if an error occurs mid-process.
+
+```rust
+use bulk_rename_rs::{BulkRename, Callback, TransactionStrategy, CollisionStrategy};
+use std::path::Path;
+use std::io;
+
+struct RenameLogger;
+
+impl Callback for RenameLogger {
+    fn on_ok(&mut self, old: &Path, new: &Path) {
+        println!("Success: {} -> {}", old.display(), new.display());
+    }
+    fn on_error(&mut self, old: &Path, new: &Path, err: io::Error) {
+        eprintln!("Error renaming {}: {}", old.display(), err);
+    }
+    fn on_rollback_ok(&mut self, old: &Path, new: &Path) {
+        println!("Rolled back: {} -> {}", old.display(), new.display());
+    }
+    fn on_rollback_error(&mut self, old: &Path, new: &Path, err: io::Error) {
+        eprintln!("Rollback failed for {}: {}", old.display(), err);
+    }
+}
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let engine = BulkRename::new(Path::new("./data"), r"(.*)\.tmp", r"$1.dat")?
+        .with_collision_strategy(CollisionStrategy::Suffix)
+        .with_transaction_strategy(TransactionStrategy::Rollback);
+
+    engine.execute(RenameLogger);
+    Ok(())
+}
+```
+
+#### Dry Run (Plan Generation)
+If you want to preview changes without touching the filesystem, use the `run` method.
+
+```rust
+use bulk_rename_rs::BulkRename;
+use std::path::Path;
+
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let engine = BulkRename::new(Path::new("."), r"v(\d+)", r"Version_$1")?;
+
+    println!("Planned changes:");
+    engine.run(|old, new| {
+        println!("  {} will become {}", old.display(), new.display());
+    });
+
+    Ok(())
 }
 ```
 
