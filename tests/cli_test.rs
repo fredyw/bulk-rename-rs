@@ -455,7 +455,7 @@ fn test_cli_rename_dirs() {
     cmd.assert().success();
 
     assert!(dir.path().join("renamed_dir").exists());
-    assert!(dir.path().join("renamed_dir/file.txt").exists());
+    assert!(dir.path().join("renamed_dir").join("file.txt").exists());
     assert!(!sub.exists());
 }
 
@@ -484,7 +484,7 @@ fn test_cli_rename_all() {
     // sub_dir -> renamed
     // test.txt -> renamed.txt
     assert!(dir.path().join("renamed").exists());
-    assert!(dir.path().join("renamed/renamed.txt").exists());
+    assert!(dir.path().join("renamed").join("renamed.txt").exists());
     assert!(!sub.exists());
     assert!(!file.exists());
 }

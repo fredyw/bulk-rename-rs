@@ -152,13 +152,28 @@ impl<'a> BulkRename<'a> {
     where
         F: Fn(&Path, &Path) + Sync + Send,
     {
-        let plan = self.generate_plan();
-        plan.into_par_iter().for_each(|(old, new)| {
-            f(&old, &new);
-        });
+        let mut plan = self.generate_plan();
+        // Sort by depth descending to ensure bottom-up processing.
+        plan.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+
+        let mut i = 0;
+        while i < plan.len() {
+            let depth = plan[i].0;
+            let mut j = i + 1;
+            while j < plan.len() && plan[j].0 == depth {
+                j += 1;
+            }
+
+            // All items from i to j have the same depth and can be safely processed in parallel.
+            plan[i..j].into_par_iter().for_each(|(_, old, new)| {
+                f(old, new);
+            });
+
+            i = j;
+        }
     }
 
-    fn generate_plan(&self) -> Vec<(PathBuf, PathBuf)> {
+    fn generate_plan(&self) -> Vec<(usize, PathBuf, PathBuf)> {
         let mut walker = WalkDir::new(self.dir);
         if let Some(depth) = self.max_depth {
             walker = walker.max_depth(depth);
@@ -235,7 +250,7 @@ impl<'a> BulkRename<'a> {
             seen_paths.insert(target_path.clone());
 
             self.process_entry(&target_path, |old, new| {
-                plan.push((old.to_path_buf(), new.to_path_buf()));
+                plan.push((entry.depth(), old.to_path_buf(), new.to_path_buf()));
             });
         }
         plan
@@ -294,8 +309,11 @@ impl<'a> BulkRename<'a> {
     where
         F: FnMut(&Path, &Path),
     {
-        let plan = self.generate_plan();
-        for (old, new) in plan {
+        let mut plan = self.generate_plan();
+        // Sort by depth descending to ensure bottom-up processing.
+        plan.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+
+        for (_, old, new) in plan {
             f(&old, &new);
         }
     }
@@ -662,8 +680,8 @@ mod tests {
 
         let plan = bulk_rename.generate_plan();
         assert_eq!(plan.len(), 1);
-        assert_eq!(plan[0].0, sub_dir);
-        assert_eq!(plan[0].1, dir.path().join("SUB"));
+        assert_eq!(plan[0].1, sub_dir);
+        assert_eq!(plan[0].2, dir.path().join("SUB"));
     }
 
     #[test]
@@ -679,14 +697,17 @@ mod tests {
             .with_rename_files(false)
             .with_rename_dirs(true);
 
-        let plan = bulk_rename.generate_plan();
+        let mut plan = bulk_rename.generate_plan();
+        // Sort to be consistent with how they will be processed
+        plan.sort_by(|a, b| b.0.cmp(&a.0).then_with(|| a.1.cmp(&b.1)));
+
         // Should have "inner" -> "INNER" and "sub" -> "SUB"
         // Because of depth descending sort, "inner" should come first.
         assert_eq!(plan.len(), 2);
-        assert_eq!(plan[0].0, sub_sub_dir);
-        assert_eq!(plan[0].1, sub_dir.join("INNER"));
-        assert_eq!(plan[1].0, sub_dir);
-        assert_eq!(plan[1].1, dir.path().join("SUB"));
+        assert_eq!(plan[0].1, sub_sub_dir);
+        assert_eq!(plan[0].2, sub_dir.join("INNER"));
+        assert_eq!(plan[1].1, sub_dir);
+        assert_eq!(plan[1].2, dir.path().join("SUB"));
     }
 
     #[test]
@@ -721,8 +742,8 @@ mod tests {
 
         let plan = bulk_rename.generate_plan();
         assert_eq!(plan.len(), 1);
-        assert_eq!(plan[0].0, link);
-        assert_eq!(plan[0].1, dir.path().join("new_link.txt"));
+        assert_eq!(plan[0].1, link);
+        assert_eq!(plan[0].2, dir.path().join("new_link.txt"));
     }
 
     #[test]
@@ -742,7 +763,7 @@ mod tests {
         let plan = bulk_rename.generate_plan();
         assert_eq!(plan.len(), 1); // Matches "file.txt" and "link.txt" (following to "file.txt"), but de-duplicated
 
-        let paths: Vec<_> = plan.iter().map(|(o, _)| o.clone()).collect();
+        let paths: Vec<_> = plan.iter().map(|(_, o, _)| o.clone()).collect();
         assert!(paths.contains(&file));
     }
 }
