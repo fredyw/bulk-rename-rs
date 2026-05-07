@@ -1,6 +1,6 @@
 use crate::callback::Callback;
 use crate::error::Error;
-use crate::models::CollisionStrategy;
+use crate::models::{CollisionStrategy, RenameHistory};
 use rayon::prelude::*;
 use regex::Regex;
 use std::borrow::Cow;
@@ -162,6 +162,20 @@ impl<'a> BulkRename<'a> {
             }
         }
         p1 == p2
+    }
+
+    /// Undoes the renames specified in the given `history`.
+    pub fn undo(history: &RenameHistory, callback: impl Callback) {
+        history.records.par_iter().for_each(|record| {
+            match fs::rename(&record.new_path, &record.old_path) {
+                Ok(_) => {
+                    callback.on_ok(&record.new_path, &record.old_path);
+                }
+                Err(error) => {
+                    callback.on_error(&record.new_path, &record.old_path, error);
+                }
+            }
+        });
     }
 }
 

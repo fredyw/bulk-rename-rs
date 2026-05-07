@@ -21,14 +21,19 @@ A CLI to do a bulk rename.
 #### CLI
 
 ```
-Usage: bmv [OPTIONS] --dir <DIR> --regex <REGEX> --replacement <REPLACEMENT>
+Usage: bmv [OPTIONS] --dir <DIR>
+       bmv [OPTIONS] --dir <DIR> --regex <REGEX> --replacement <REPLACEMENT>
+       bmv --undo [OPTIONS]
 
 Options:
   -f, --dir <DIR>                  Set the directory
-  -r, --regex <REGEX>              Set the regex
-  -p, --replacement <REPLACEMENT>  Set the replacement
+  -r, --regex <REGEX>              Set the regex (required unless --undo is present)
+  -p, --replacement <REPLACEMENT>  Set the replacement (required unless --undo is present)
   -d, --dry-run                    Perform a dry-run
   -q, --quiet                      Run in quiet mode
+  -c, --collision <STRATEGY>       Set the collision strategy [default: skip] [possible values: skip, overwrite, suffix]
+      --undo                       Undo the previous rename operation
+      --history-file <PATH>        Set the history file path [default: .bmv-undo.json]
   -h, --help                       Print help
   -V, --version                    Print version
 ```
@@ -36,7 +41,7 @@ Options:
 #### API
 
 ```rust
-use bmv::{BulkRename, Callback};
+use bmv::{BulkRename, Callback, CollisionStrategy};
 use std::path::Path;
 
 struct SimpleCallback {}
@@ -65,6 +70,7 @@ impl Callback for SimpleCallback {
 let dir = Path::new("tmp");
 match BulkRename::new(dir, r"(test)_(\d+).txt", r"${2}_${1}.txt") {
     Ok(br) => {
+        let br = br.with_collision_strategy(CollisionStrategy::Suffix);
         br.bulk_rename(SimpleCallback::new());
     }
     Err(e) => {

@@ -2,7 +2,7 @@
 extern crate bmv;
 extern crate clap;
 
-use bmv::{BulkRename, Callback, CollisionStrategy, Error};
+use bmv::{BulkRename, Callback, CollisionStrategy, Error, HistoryCallback, RenameHistory};
 use clap::Parser;
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
@@ -16,12 +16,12 @@ struct Args {
     dir: PathBuf,
 
     /// Set the regex.
-    #[arg(short = 'r', long)]
-    regex: String,
+    #[arg(short = 'r', long, required_unless_present = "undo")]
+    regex: Option<String>,
 
     /// Set the replacement.
-    #[arg(short = 'p', long)]
-    replacement: String,
+    #[arg(short = 'p', long, required_unless_present = "undo")]
+    replacement: Option<String>,
 
     /// Perform a dry-run.
     #[arg(short = 'd', long, default_value_t = false)]
@@ -34,6 +34,14 @@ struct Args {
     /// Set the collision strategy.
     #[arg(short = 'c', long, default_value = "skip", value_parser = ["skip", "overwrite", "suffix"])]
     collision: CollisionStrategy,
+
+    /// Undo the previous rename operation using the history file.
+    #[arg(long, default_value_t = false)]
+    undo: bool,
+
+    /// Set the history file path for undo/rollback.
+    #[arg(long, default_value = ".bmv-undo.json")]
+    history_file: PathBuf,
 }
 
 /// A callback implementation for the CLI.
@@ -68,11 +76,31 @@ impl Callback for CliCallback {
     }
 }
 
-/// Main entry point for the application.
-fn main() {
+fn run() {
     let args = Args::parse();
+
+    if args.undo {
+        match std::fs::read_to_string(&args.history_file) {
+            Ok(content) => match serde_json::from_str::<RenameHistory>(&content) {
+                Ok(history) => {
+                    BulkRename::undo(&history, CliCallback::new(args.quiet));
+                }
+                Err(e) => {
+                    eprintln!("Error: Failed to parse history file: {}", e);
+                }
+            },
+            Err(e) => {
+                eprintln!("Error: Failed to read history file: {}", e);
+            }
+        }
+        return;
+    }
+
     let path = args.dir.as_path();
-    let bulk_rename = BulkRename::new(path, &args.regex, &args.replacement);
+    let regex = args.regex.as_deref().unwrap_or("");
+    let replacement = args.replacement.as_deref().unwrap_or("");
+
+    let bulk_rename = BulkRename::new(path, regex, replacement);
     match bulk_rename {
         Ok(bulk_rename) => {
             let bulk_rename = bulk_rename.with_collision_strategy(args.collision);
@@ -92,7 +120,24 @@ fn main() {
                     }
                 })
             } else {
-                bulk_rename.bulk_rename(CliCallback::new(args.quiet))
+                let history = Mutex::new(Vec::new());
+                let callback = HistoryCallback::new(CliCallback::new(args.quiet), &history);
+                bulk_rename.bulk_rename(callback);
+
+                let records = history.into_inner().unwrap();
+                if !records.is_empty() {
+                    let history = RenameHistory { records };
+                    match serde_json::to_string_pretty(&history) {
+                        Ok(json) => {
+                            if let Err(e) = std::fs::write(&args.history_file, json) {
+                                eprintln!("Error: Failed to save history: {}", e);
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("Error: Failed to serialize history: {}", e);
+                        }
+                    }
+                }
             }
         }
         Err(error) => match error {
@@ -100,11 +145,19 @@ fn main() {
                 eprintln!("Error: {} is not a directory", path.display())
             }
             Error::RegexError(error) => {
-                eprintln!("Error: {} is not a valid regex: '{}'", args.regex, error)
+                eprintln!(
+                    "Error: {} is not a valid regex: '{}'",
+                    args.regex.unwrap_or_default(),
+                    error
+                )
             }
             Error::IoError { path, source } => {
                 eprintln!("Error: I/O error at {}: {}", path.display(), source)
             }
         },
     }
+}
+
+fn main() {
+    run();
 }

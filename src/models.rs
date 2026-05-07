@@ -1,4 +1,6 @@
+use serde::{Deserialize, Serialize};
 use std::fmt;
+use std::path::PathBuf;
 use std::str::FromStr;
 
 /// Strategies for handling filename collisions.
@@ -37,6 +39,34 @@ impl fmt::Display for CollisionStrategy {
             CollisionStrategy::Suffix => "suffix",
         };
         write!(f, "{}", s)
+    }
+}
+
+/// A record of a single file rename operation.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct RenameRecord {
+    /// The original path of the file.
+    pub old_path: PathBuf,
+    /// The new path of the file.
+    pub new_path: PathBuf,
+}
+
+/// A collection of rename records representing a history of operations.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+pub struct RenameHistory {
+    /// The list of rename records.
+    pub records: Vec<RenameRecord>,
+}
+
+impl RenameHistory {
+    /// Creates a new, empty `RenameHistory`.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Adds a record to the history.
+    pub fn add(&mut self, old_path: PathBuf, new_path: PathBuf) {
+        self.records.push(RenameRecord { old_path, new_path });
     }
 }
 
