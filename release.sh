@@ -71,14 +71,22 @@ fi
 echo "Updating Cargo.lock..."
 cargo check > /dev/null 2>&1
 
-# 9. Commit the version change
+# 9. Commit the version update if there are changes
 echo "Committing version update..."
 git add Cargo.toml Cargo.lock
-git commit -m "chore: release v$VERSION" -m "Automated version bump to v$VERSION and update of Cargo.lock."
+if ! git diff --cached --quiet; then
+    git commit -m "chore: release v$VERSION" -m "Automated version bump to v$VERSION and update of Cargo.lock."
+else
+    echo "No version changes to commit (Cargo.toml already at v$VERSION)."
+fi
 
 # 10. Create a git tag
-echo "Creating git tag v$VERSION..."
-git tag -a "v$VERSION" -m "v$VERSION"
+if git rev-parse "v$VERSION" >/dev/null 2>&1; then
+    echo -e "${YELLOW}Warning: Tag v$VERSION already exists. Skipping tag creation.${NC}"
+else
+    echo "Creating git tag v$VERSION..."
+    git tag -a "v$VERSION" -m "v$VERSION"
+fi
 
 echo -e "${GREEN}Release v$VERSION prepared locally.${NC}"
 
