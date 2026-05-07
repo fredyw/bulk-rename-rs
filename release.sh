@@ -30,9 +30,10 @@ if [ ! -f "Cargo.toml" ]; then
     exit 1
 fi
 
-# 4. Ensure git status is clean
-if [[ -n $(git status -s) ]]; then
-    echo -e "${RED}Error: Git working directory is not clean. Please commit or stash changes first.${NC}"
+# 4. Ensure git status is clean (ignoring Cargo.toml/lock if they only contain version updates)
+DIRTY_FILES=$(git status --porcelain | grep -vE "^( M|M ) (Cargo.toml|Cargo.lock)$" || true)
+if [[ -n "$DIRTY_FILES" ]]; then
+    echo -e "${RED}Error: Git working directory has uncommitted changes in files other than Cargo.toml/lock.${NC}"
     git status -s
     exit 1
 fi
@@ -82,7 +83,14 @@ fi
 
 # 10. Create a git tag
 if git rev-parse "v$VERSION" >/dev/null 2>&1; then
-    echo -e "${YELLOW}Warning: Tag v$VERSION already exists. Skipping tag creation.${NC}"
+    TAG_COMMIT=$(git rev-parse "v$VERSION")
+    HEAD_COMMIT=$(git rev-parse HEAD)
+    if [ "$TAG_COMMIT" != "$HEAD_COMMIT" ]; then
+        echo -e "${RED}Error: Tag v$VERSION already exists but points to a different commit ($TAG_COMMIT) than HEAD ($HEAD_COMMIT).${NC}"
+        echo "Please delete the tag manually if you want to recreate it: git tag -d v$VERSION"
+        exit 1
+    fi
+    echo -e "${YELLOW}Warning: Tag v$VERSION already exists on HEAD. Skipping tag creation.${NC}"
 else
     echo "Creating git tag v$VERSION..."
     git tag -a "v$VERSION" -m "v$VERSION"
