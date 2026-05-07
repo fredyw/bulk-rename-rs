@@ -81,6 +81,45 @@ impl fmt::Display for CollisionStrategy {
     }
 }
 
+/// Strategies for handling errors during bulk rename.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum TransactionStrategy {
+    /// Continue with other renames if one fails.
+    #[default]
+    Continue,
+    /// Stop immediately if one rename fails.
+    Abort,
+    /// Stop immediately and roll back previous changes if one rename fails.
+    Rollback,
+}
+
+impl FromStr for TransactionStrategy {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "continue" => Ok(TransactionStrategy::Continue),
+            "abort" => Ok(TransactionStrategy::Abort),
+            "rollback" => Ok(TransactionStrategy::Rollback),
+            _ => Err(format!(
+                "invalid transaction strategy: {}. Valid values are: continue, abort, rollback",
+                s
+            )),
+        }
+    }
+}
+
+impl fmt::Display for TransactionStrategy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            TransactionStrategy::Continue => "continue",
+            TransactionStrategy::Abort => "abort",
+            TransactionStrategy::Rollback => "rollback",
+        };
+        write!(f, "{}", s)
+    }
+}
+
 /// A record of a single file rename operation.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct RenameRecord {

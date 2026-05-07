@@ -12,6 +12,7 @@ A powerful command-line tool for bulk renaming files using regular expressions, 
     - [Text Transformations](#text-transformations)
     - [Collision Handling](#collision-handling)
     - [Undo & Rollback](#undo--rollback)
+    - [Transactional Renames](#transactional-renames)
     - [Filtering](#filtering)
     - [Interactive Mode](#interactive-mode)
 - [Usage](#usage)
@@ -52,6 +53,15 @@ Mistakes happen. `bmv` tracks renames in a history file (defaults to `.bmv-undo.
 ```bash
 bmv --undo
 ```
+
+### Transactional Renames
+Maintain a consistent state during bulk operations using the `--transaction` (or `-T`) flag:
+- `continue` (default): Best-effort renaming. Continue with other files even if one fails.
+- `abort`: Stop immediately on the first error.
+- `rollback`: Stop immediately and undo any successful renames from the current session if an error occurs.
+
+> [!CAUTION]
+> `abort` and `rollback` strategies perform renames **sequentially** to ensure a predictable state.
 
 ### Filtering
 Precisely target files using multiple filtering options:
@@ -100,6 +110,7 @@ Options:
       --counter-start <START>      Set the starting value for the counter {i} [default: 1]
   -m, --mode <MODE>                Set the renaming mode [default: files] [possible values: files, dirs, all]
   -s, --symlinks <STRATEGY>        Set the symlink strategy [default: ignore] [possible values: ignore, rename, follow]
+  -T, --transaction <STRATEGY>     Set the transaction strategy [default: continue] [possible values: continue, abort, rollback]
   -h, --help                       Print help
   -V, --version                    Print version
 ```

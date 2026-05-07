@@ -4,6 +4,7 @@ extern crate clap;
 
 use bmv::{
     BulkRename, Callback, CollisionStrategy, HistoryCallback, RenameHistory, SymlinkStrategy,
+    TransactionStrategy,
 };
 use clap::{Parser, ValueEnum};
 use std::collections::HashSet;
@@ -81,6 +82,10 @@ struct Args {
     /// Set the symlink strategy.
     #[arg(short = 's', long, default_value = "ignore")]
     symlinks: SymlinkStrategy,
+
+    /// Set the transaction strategy.
+    #[arg(short = 'T', long, default_value = "continue")]
+    transaction: TransactionStrategy,
 }
 
 #[derive(ValueEnum, Clone, Debug, Default, PartialEq, Eq)]
@@ -121,6 +126,27 @@ impl Callback for CliCallback {
             );
         }
     }
+
+    fn on_rollback_ok(&self, old_path: &Path, new_path: &Path) {
+        if !self.quiet {
+            println!(
+                "Rollback: {} --> {}",
+                old_path.display(),
+                new_path.display()
+            );
+        }
+    }
+
+    fn on_rollback_error(&self, old_path: &Path, new_path: &Path, error: std::io::Error) {
+        if !self.quiet {
+            eprintln!(
+                "Rollback Error: Unable to rename {} back to {}: {}",
+                old_path.display(),
+                new_path.display(),
+                error
+            );
+        }
+    }
 }
 
 fn run() -> Result<(), Box<dyn std::error::Error>> {
@@ -148,7 +174,8 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .with_counter_start(args.counter_start)
         .with_rename_files(args.mode == RenameMode::Files || args.mode == RenameMode::All)
         .with_rename_dirs(args.mode == RenameMode::Dirs || args.mode == RenameMode::All)
-        .with_symlink_strategy(args.symlinks);
+        .with_symlink_strategy(args.symlinks)
+        .with_transaction_strategy(args.transaction);
 
     if args.dry_run {
         let targets = Mutex::new(HashSet::new());

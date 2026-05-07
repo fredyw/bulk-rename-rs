@@ -1,6 +1,6 @@
 use crate::callback::Callback;
 use crate::error::Error;
-use crate::models::{CollisionStrategy, RenameHistory, SymlinkStrategy};
+use crate::models::{CollisionStrategy, RenameHistory, SymlinkStrategy, TransactionStrategy};
 use chrono::{DateTime, Local};
 use rayon::prelude::*;
 use regex::Regex;
@@ -38,6 +38,8 @@ pub struct BulkRename<'a> {
     rename_dirs: bool,
     /// The strategy for handling symlinks.
     symlink_strategy: SymlinkStrategy,
+    /// The strategy for handling transactions (errors).
+    transaction_strategy: TransactionStrategy,
 }
 
 impl<'a> BulkRename<'a> {
@@ -60,6 +62,7 @@ impl<'a> BulkRename<'a> {
             rename_files: true,
             rename_dirs: false,
             symlink_strategy: SymlinkStrategy::default(),
+            transaction_strategy: TransactionStrategy::default(),
         })
     }
 
@@ -131,6 +134,12 @@ impl<'a> BulkRename<'a> {
     /// Sets the symlink strategy.
     pub fn with_symlink_strategy(mut self, strategy: SymlinkStrategy) -> Self {
         self.symlink_strategy = strategy;
+        self
+    }
+
+    /// Sets the transaction strategy.
+    pub fn with_transaction_strategy(mut self, strategy: TransactionStrategy) -> Self {
+        self.transaction_strategy = strategy;
         self
     }
 
@@ -293,24 +302,67 @@ impl<'a> BulkRename<'a> {
 
     /// Performs the bulk rename operation, notifying the provided `callback` of each outcome.
     ///
-    /// Files are renamed in place. This operation is performed in parallel across multiple threads.
+    /// Files are renamed in place. This operation is performed in parallel across multiple threads,
+    /// unless the transaction strategy is Abort or Rollback, in which case it is performed sequentially.
     pub fn execute(&self, callback: impl Callback) {
         let targets = Mutex::new(HashSet::new());
-        self.run(|old_path, new_path| {
-            let final_path = match self.resolve_collision(old_path, new_path, &targets) {
-                Some(path) => path,
-                None => return, // Skip
-            };
 
-            match fs::rename(old_path, &final_path) {
-                Ok(_) => {
-                    callback.on_ok(old_path, &final_path);
+        if self.transaction_strategy == TransactionStrategy::Continue {
+            self.run(|old_path, new_path| {
+                let final_path = match self.resolve_collision(old_path, new_path, &targets) {
+                    Some(path) => path,
+                    None => return, // Skip
+                };
+
+                match fs::rename(old_path, &final_path) {
+                    Ok(_) => {
+                        callback.on_ok(old_path, &final_path);
+                    }
+                    Err(error) => {
+                        callback.on_error(old_path, &final_path, error);
+                    }
                 }
-                Err(error) => {
-                    callback.on_error(old_path, &final_path, error);
+            });
+        } else {
+            let mut successful_renames = Vec::new();
+            let mut failed = false;
+
+            self.run_seq(|old_path, new_path| {
+                if failed {
+                    return;
+                }
+
+                let final_path = match self.resolve_collision(old_path, new_path, &targets) {
+                    Some(path) => path,
+                    None => return, // Skip
+                };
+
+                match fs::rename(old_path, &final_path) {
+                    Ok(_) => {
+                        callback.on_ok(old_path, &final_path);
+                        successful_renames.push((old_path.to_path_buf(), final_path));
+                    }
+                    Err(error) => {
+                        callback.on_error(old_path, &final_path, error);
+                        failed = true;
+                    }
+                }
+            });
+
+            if failed && self.transaction_strategy == TransactionStrategy::Rollback {
+                // Perform rollback
+                for (old, new) in successful_renames.into_iter().rev() {
+                    match fs::rename(&new, &old) {
+                        Ok(_) => {
+                            callback.on_rollback_ok(&new, &old);
+                        }
+                        Err(error) => {
+                            callback.on_rollback_error(&new, &old, error);
+                        }
+                    }
                 }
             }
-        })
+        }
     }
 
     /// Resolves a collision for a given path and target path.
