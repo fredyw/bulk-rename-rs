@@ -9,6 +9,7 @@ A powerful command-line tool for bulk renaming files using regular expressions, 
 
 - [Features](#features)
     - [Dynamic Variables](#dynamic-variables)
+    - [Text Transformations](#text-transformations)
     - [Collision Handling](#collision-handling)
     - [Undo & Rollback](#undo--rollback)
     - [Filtering](#filtering)
@@ -28,6 +29,14 @@ Placeholders in the replacement string allow for dynamic naming:
 - `{i}`: An auto-incrementing counter. Use `{i:N}` (e.g., `{i:3}`) for padding (e.g., `001`).
 - `{date}`: The file's modification date in `%Y-%m-%d` format.
 - `{date:FORMAT}`: The file's modification date with a custom [chrono format](https://docs.rs/chrono/latest/chrono/format/strftime/index.html) (e.g., `{date:%Y%m%d}`).
+
+### Text Transformations
+Apply built-in transformations to matched groups or static text:
+- `{u:TEXT}` or `{upper:TEXT}`: Convert to UPPERCASE.
+- `{l:TEXT}` or `{lower:TEXT}`: Convert to lowercase.
+- `{t:TEXT}` or `{title:TEXT}`: Convert to Title Case.
+
+Example: `-p "{u:$1}_{l:$2}_{t:$1 $2}.txt"`
 
 > [!NOTE]
 > When dynamic variables are used, files are processed in alphabetical order to ensure deterministic assignment.

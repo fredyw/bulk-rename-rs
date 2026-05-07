@@ -247,3 +247,45 @@ fn bulk_rename_date_custom() {
 
     fs::remove_dir_all(tmp_path).unwrap();
 }
+
+#[test]
+fn bulk_rename_transformations() {
+    let tmp_path = Path::new("tmp_trans");
+    fs::create_dir_all(tmp_path).unwrap();
+    File::create("tmp_trans/hello world.txt").unwrap();
+
+    // Test upper, lower, title
+    let bulk_rename = BulkRename::new(
+        tmp_path,
+        r"(hello) (world)\.txt",
+        r"{u:$1}_{l:$2}_{t:$1 $2}.txt",
+    )
+    .unwrap();
+
+    let mut names = Vec::new();
+    bulk_rename.run_seq(|_, new| {
+        names.push(new.file_name().unwrap().to_string_lossy().to_string());
+    });
+
+    assert_eq!(names[0], "HELLO_world_Hello World.txt");
+
+    fs::remove_dir_all(tmp_path).unwrap();
+}
+
+#[test]
+fn bulk_rename_transformations_nested() {
+    let tmp_path = Path::new("tmp_trans_nested");
+    fs::create_dir_all(tmp_path).unwrap();
+    File::create("tmp_trans_nested/test.txt").unwrap();
+
+    let bulk_rename = BulkRename::new(tmp_path, r"(test)\.txt", r"{u:{l:$1}}.txt").unwrap();
+
+    let mut names = Vec::new();
+    bulk_rename.run_seq(|_, new| {
+        names.push(new.file_name().unwrap().to_string_lossy().to_string());
+    });
+
+    assert_eq!(names[0], "TEST.txt");
+
+    fs::remove_dir_all(tmp_path).unwrap();
+}

@@ -286,6 +286,9 @@ impl<'a> BulkRename<'a> {
     fn process_dynamic_variables(&self, name: &str, path: &Path) -> String {
         let mut result = name.to_string();
 
+        // Handle transformations {u:}, {l:}, {t:}
+        result = self.process_transformations(result);
+
         // Handle {i} and {i:N}
         if result.contains("{i") {
             let i = self.counter.fetch_add(1, Ordering::SeqCst);
@@ -321,6 +324,49 @@ impl<'a> BulkRename<'a> {
         }
 
         result
+    }
+
+    fn process_transformations(&self, mut s: String) -> String {
+        let re = Regex::new(r"\{(u|upper|l|lower|t|title):([^{}]*)\}").unwrap();
+
+        loop {
+            let next = re
+                .replace_all(&s, |caps: &regex::Captures| {
+                    let transform = caps.get(1).unwrap().as_str();
+                    let text = caps.get(2).unwrap().as_str();
+                    match transform {
+                        "u" | "upper" => text.to_uppercase(),
+                        "l" | "lower" => text.to_lowercase(),
+                        "t" | "title" => self.to_title_case(text),
+                        _ => text.to_string(),
+                    }
+                })
+                .to_string();
+
+            if next == s {
+                break;
+            }
+            s = next;
+        }
+        s
+    }
+
+    fn to_title_case(&self, s: &str) -> String {
+        s.split_inclusive(|c: char| !c.is_alphanumeric())
+            .map(|word| {
+                let mut chars = word.chars();
+                match chars.next() {
+                    None => String::new(),
+                    Some(f) => {
+                        if f.is_alphanumeric() {
+                            f.to_uppercase().collect::<String>() + &chars.as_str().to_lowercase()
+                        } else {
+                            f.to_string() + chars.as_str()
+                        }
+                    }
+                }
+            })
+            .collect()
     }
 
     fn is_same_file(p1: &Path, p2: &Path) -> bool {
@@ -405,6 +451,20 @@ mod tests {
 
         assert!(BulkRename::is_same_file(&file1, &file1));
         assert!(!BulkRename::is_same_file(&file1, &file2));
+    }
+
+    #[test]
+    fn test_to_title_case() {
+        let dir = tempdir().unwrap();
+        let bulk_rename = BulkRename::new(dir.path(), ".*", "replacement").unwrap();
+
+        assert_eq!(bulk_rename.to_title_case("hello world"), "Hello World");
+        assert_eq!(bulk_rename.to_title_case("HELLO WORLD"), "Hello World");
+        assert_eq!(bulk_rename.to_title_case("hello_world"), "Hello_World");
+        assert_eq!(bulk_rename.to_title_case("hello-world"), "Hello-World");
+        assert_eq!(bulk_rename.to_title_case("123hello"), "123hello");
+        assert_eq!(bulk_rename.to_title_case("a b c"), "A B C");
+        assert_eq!(bulk_rename.to_title_case("test.txt"), "Test.Txt");
     }
 
     #[test]
