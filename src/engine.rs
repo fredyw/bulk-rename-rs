@@ -40,6 +40,10 @@ pub struct BulkRename<'a> {
     symlink_strategy: SymlinkStrategy,
     /// The strategy for handling transactions (errors).
     transaction_strategy: TransactionStrategy,
+    /// Inline Python script.
+    python_script: Option<String>,
+    /// Python script file.
+    python_file: Option<PathBuf>,
 }
 
 impl<'a> BulkRename<'a> {
@@ -63,6 +67,8 @@ impl<'a> BulkRename<'a> {
             rename_dirs: false,
             symlink_strategy: SymlinkStrategy::default(),
             transaction_strategy: TransactionStrategy::default(),
+            python_script: None,
+            python_file: None,
         })
     }
 
@@ -140,6 +146,18 @@ impl<'a> BulkRename<'a> {
     /// Sets the transaction strategy.
     pub fn with_transaction_strategy(mut self, strategy: TransactionStrategy) -> Self {
         self.transaction_strategy = strategy;
+        self
+    }
+
+    /// Sets the inline Python script.
+    pub fn with_python_script(mut self, script: Option<String>) -> Self {
+        self.python_script = script;
+        self
+    }
+
+    /// Sets the Python script file.
+    pub fn with_python_file(mut self, file: Option<PathBuf>) -> Self {
+        self.python_file = file;
         self
     }
 
@@ -294,14 +312,86 @@ impl<'a> BulkRename<'a> {
         F: FnMut(&Path, &Path),
     {
         if let Some(old_file_name) = path.file_name().and_then(|n| n.to_str()) {
-            let new_name = self.regex.replace_all(old_file_name, self.replacement);
-            if old_file_name != new_name {
-                let mut new_path = path.to_path_buf();
-                let processed_name = self.process_dynamic_variables(&new_name, path);
-                new_path.set_file_name(processed_name);
-                f(path, &new_path);
+            let new_name_res = if self.python_script.is_some() || self.python_file.is_some() {
+                self.run_python_script(old_file_name, path)
+            } else {
+                Ok(self
+                    .regex
+                    .replace_all(old_file_name, self.replacement)
+                    .to_string())
+            };
+
+            match new_name_res {
+                Ok(new_name) => {
+                    if old_file_name != new_name {
+                        let mut new_path = path.to_path_buf();
+                        let processed_name = self.process_dynamic_variables(&new_name, path);
+                        new_path.set_file_name(processed_name);
+                        f(path, &new_path);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Error processing entry {}: {}", path.display(), e);
+                }
             }
         }
+    }
+
+    fn run_python_script(&self, name: &str, path: &Path) -> Result<String, Error> {
+        use rustpython_vm as rustpython;
+
+        let script = if let Some(ref s) = self.python_script {
+            s.clone()
+        } else if let Some(ref f) = self.python_file {
+            std::fs::read_to_string(f).map_err(|e| Error::IoError {
+                path: f.clone(),
+                source: e,
+            })?
+        } else {
+            return Ok(name.to_string());
+        };
+
+        let interp = rustpython::Interpreter::with_init(Default::default(), |vm| {
+            vm.add_native_modules(rustpython_stdlib::get_module_inits());
+            vm.add_frozen(rustpython_pylib::FROZEN_STDLIB);
+        });
+        interp.enter(|vm| {
+            let scope = vm.new_scope_with_builtins();
+            scope
+                .globals
+                .set_item("name", vm.ctx.new_str(name).into(), vm)
+                .map_err(|e| Error::PythonError(format!("{:?}", e)))?;
+            scope
+                .globals
+                .set_item(
+                    "path",
+                    vm.ctx.new_str(path.to_string_lossy().as_ref()).into(),
+                    vm,
+                )
+                .map_err(|e| Error::PythonError(format!("{:?}", e)))?;
+
+            let code_obj = vm
+                .compile(
+                    &script,
+                    rustpython_vm::compiler::Mode::Exec,
+                    "<script>".to_owned(),
+                )
+                .map_err(|e| Error::PythonError(format!("{:?}", e)))?;
+
+            vm.run_code_obj(code_obj, scope.clone())
+                .map_err(|e| Error::PythonError(format!("{:?}", e)))?;
+
+            if let Ok(result) = scope.globals.get_item("result", vm) {
+                let result_str: String = result
+                    .try_into_value(vm)
+                    .map_err(|e| Error::PythonError(format!("{:?}", e)))?;
+                return Ok(result_str);
+            }
+
+            Err(Error::PythonError(
+                "Python script must set the 'result' variable to the new filename.".to_string(),
+            ))
+        })
     }
 
     /// Sequential version of `run`.

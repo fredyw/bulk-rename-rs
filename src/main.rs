@@ -20,11 +20,11 @@ struct Args {
     dir: PathBuf,
 
     /// Set the regex.
-    #[arg(short = 'r', long, required_unless_present = "undo")]
+    #[arg(short = 'r', long, required_unless_present_any = ["undo", "python_script", "python_file"])]
     regex: Option<String>,
 
     /// Set the replacement.
-    #[arg(short = 'p', long, required_unless_present = "undo")]
+    #[arg(short = 'p', long, required_unless_present_any = ["undo", "python_script", "python_file"])]
     replacement: Option<String>,
 
     /// Perform a dry-run.
@@ -86,6 +86,14 @@ struct Args {
     /// Set the transaction strategy.
     #[arg(short = 'T', long, default_value = "continue")]
     transaction: TransactionStrategy,
+
+    /// Inline Python script.
+    #[arg(long)]
+    python_script: Option<String>,
+
+    /// Python script file.
+    #[arg(long)]
+    python_file: Option<PathBuf>,
 }
 
 #[derive(ValueEnum, Clone, Debug, Default, PartialEq, Eq)]
@@ -175,7 +183,9 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         .with_rename_files(args.mode == RenameMode::Files || args.mode == RenameMode::All)
         .with_rename_dirs(args.mode == RenameMode::Dirs || args.mode == RenameMode::All)
         .with_symlink_strategy(args.symlinks)
-        .with_transaction_strategy(args.transaction);
+        .with_transaction_strategy(args.transaction)
+        .with_python_script(args.python_script)
+        .with_python_file(args.python_file);
 
     if args.dry_run {
         let targets = Mutex::new(HashSet::new());

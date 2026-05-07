@@ -123,6 +123,8 @@ Options:
   -m, --mode <MODE>                Set the renaming mode [default: files] [possible values: files, dirs, all]
   -s, --symlinks <STRATEGY>        Set the symlink strategy [default: ignore] [possible values: ignore, rename, follow]
   -T, --transaction <STRATEGY>     Set the transaction strategy [default: continue] [possible values: continue, abort, rollback]
+      --python-script <SCRIPT>     Inline Python script for custom renaming logic
+      --python-file <PATH>         Python script file for custom renaming logic
   -h, --help                       Print help
   -V, --version                    Print version
 ```
@@ -194,6 +196,29 @@ Ensure consistency during bulk operations:
 - **Recursion**: Control depth with `--max-depth`.
 - **Modes**: Rename `files`, `dirs`, or `all`.
 - **Symlinks**: Choose to `ignore`, `rename` the link, or `follow` to the target.
+
+### Scriptable Renaming (Python)
+For complex logic, you can use embedded Python scripting. This feature is self-contained and does not require a local Python installation.
+
+Your script (whether inline or from a file) must set the `result` variable to the desired new filename.
+
+**Available Variables:**
+- `name`: The current filename.
+- `path`: The full path to the file.
+
+**Examples:**
+```bash
+# Inline snippet: uppercase
+brnm -f . --python-script "result = name.upper()"
+
+# Inline snippet: regex substitution
+brnm -f . --python-script "import re; result = re.sub(r'\d+', '', name)"
+
+# Loading from a file
+# File: my_logic.py
+# result = name.replace(' ', '_').lower()
+brnm -f . --python-file my_logic.py
+```
 
 ---
 

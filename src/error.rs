@@ -16,4 +16,7 @@ pub enum Error {
         path: PathBuf,
         source: std::io::Error,
     },
+    /// A Python error occurred.
+    #[error("Python error: {0}")]
+    PythonError(String),
 }
