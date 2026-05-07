@@ -164,3 +164,102 @@ impl<'a> BulkRename<'a> {
         p1 == p2
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs::File;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_bulk_rename_new() {
+        let dir = tempdir().unwrap();
+        let bulk_rename = BulkRename::new(dir.path(), ".*", "replacement").unwrap();
+        assert_eq!(bulk_rename.dir, dir.path());
+        assert_eq!(bulk_rename.replacement, "replacement");
+        assert_eq!(bulk_rename.collision_strategy, CollisionStrategy::Skip);
+    }
+
+    #[test]
+    fn test_bulk_rename_new_not_dir() {
+        let dir = tempdir().unwrap();
+        let file_path = dir.path().join("file");
+        File::create(&file_path).unwrap();
+        let result = BulkRename::new(&file_path, ".*", "replacement");
+        assert!(matches!(result, Err(Error::NotDirError)));
+    }
+
+    #[test]
+    fn test_bulk_rename_new_invalid_regex() {
+        let dir = tempdir().unwrap();
+        let result = BulkRename::new(dir.path(), "[", "replacement");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_bulk_rename_with_collision_strategy() {
+        let dir = tempdir().unwrap();
+        let bulk_rename = BulkRename::new(dir.path(), ".*", "replacement")
+            .unwrap()
+            .with_collision_strategy(CollisionStrategy::Overwrite);
+        assert_eq!(bulk_rename.collision_strategy, CollisionStrategy::Overwrite);
+    }
+
+    #[test]
+    fn test_is_same_file() {
+        let dir = tempdir().unwrap();
+        let file1 = dir.path().join("file1");
+        let file2 = dir.path().join("file2");
+        File::create(&file1).unwrap();
+        File::create(&file2).unwrap();
+
+        assert!(BulkRename::is_same_file(&file1, &file1));
+        assert!(!BulkRename::is_same_file(&file1, &file2));
+    }
+
+    #[test]
+    fn test_resolve_collision_skip() {
+        let dir = tempdir().unwrap();
+        let old_path = dir.path().join("old");
+        let new_path = dir.path().join("new");
+        File::create(&new_path).unwrap();
+
+        let bulk_rename = BulkRename::new(dir.path(), ".*", "replacement").unwrap();
+        let targets = Mutex::new(HashSet::new());
+
+        let result = bulk_rename.resolve_collision(&old_path, &new_path, &targets);
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_resolve_collision_overwrite() {
+        let dir = tempdir().unwrap();
+        let old_path = dir.path().join("old");
+        let new_path = dir.path().join("new");
+        File::create(&new_path).unwrap();
+
+        let bulk_rename = BulkRename::new(dir.path(), ".*", "replacement")
+            .unwrap()
+            .with_collision_strategy(CollisionStrategy::Overwrite);
+        let targets = Mutex::new(HashSet::new());
+
+        let result = bulk_rename.resolve_collision(&old_path, &new_path, &targets);
+        assert_eq!(result.unwrap(), new_path);
+    }
+
+    #[test]
+    fn test_resolve_collision_suffix() {
+        let dir = tempdir().unwrap();
+        let old_path = dir.path().join("old");
+        let new_path = dir.path().join("new.txt");
+        File::create(&new_path).unwrap();
+
+        let bulk_rename = BulkRename::new(dir.path(), ".*", "replacement")
+            .unwrap()
+            .with_collision_strategy(CollisionStrategy::Suffix);
+        let targets = Mutex::new(HashSet::new());
+
+        let result = bulk_rename.resolve_collision(&old_path, &new_path, &targets);
+        assert_eq!(result.unwrap(), dir.path().join("new (1).txt"));
+    }
+}

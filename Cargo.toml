@@ -10,3 +10,6 @@ regex = "1.10.6"
 walkdir = "2.5.0"
 rayon = "1.10.0"
 thiserror = "2.0.18"
+
+[dev-dependencies]
+tempfile = "3.12.0"

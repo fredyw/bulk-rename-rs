@@ -39,3 +39,37 @@ impl fmt::Display for CollisionStrategy {
         write!(f, "{}", s)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_collision_strategy_from_str() {
+        assert_eq!(
+            CollisionStrategy::from_str("skip").unwrap(),
+            CollisionStrategy::Skip
+        );
+        assert_eq!(
+            CollisionStrategy::from_str("OVERWRITE").unwrap(),
+            CollisionStrategy::Overwrite
+        );
+        assert_eq!(
+            CollisionStrategy::from_str("Suffix").unwrap(),
+            CollisionStrategy::Suffix
+        );
+        assert!(CollisionStrategy::from_str("invalid").is_err());
+    }
+
+    #[test]
+    fn test_collision_strategy_display() {
+        assert_eq!(CollisionStrategy::Skip.to_string(), "skip");
+        assert_eq!(CollisionStrategy::Overwrite.to_string(), "overwrite");
+        assert_eq!(CollisionStrategy::Suffix.to_string(), "suffix");
+    }
+
+    #[test]
+    fn test_collision_strategy_default() {
+        assert_eq!(CollisionStrategy::default(), CollisionStrategy::Skip);
+    }
+}
