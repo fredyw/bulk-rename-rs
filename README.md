@@ -25,6 +25,7 @@ A powerful command-line tool for bulk renaming files using regular expressions, 
     - [Collision Handling](#collision-handling)
     - [Transactional Renames](#transactional-renames)
     - [Filtering & Modes](#filtering--modes)
+    - [Scriptable Renaming (Python)](#scriptable-renaming-python)
 - [Development](#development)
     - [Building](#building)
     - [Testing](#testing)
