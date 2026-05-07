@@ -34,7 +34,7 @@ Before submitting any change, ensure all tests pass:
 ## 5. Performance & Safety
 Since `bren` is a bulk file renaming tool:
 - **Safety First**: Ensure that file operations are safe and handle potential conflicts (e.g., name collisions) gracefully.
-- **Parallelism**: Leverage `rayon` for efficient parallel processing of large directories.
+- **Efficiency**: Ensure that file operations are efficient and handle potential conflicts (e.g., name collisions) gracefully.
 - **Regex Efficiency**: Be mindful of regex compilation and performance, especially when processing thousands of files.
 - **Dry Run**: Always consider how changes affect the "dry run" functionality to ensure users can preview changes safely.
 - **Transactions**: Respect `TransactionStrategy` (Continue, Abort, Rollback) when implementing new renaming logic. Ensure `Rollback` correctly reverts changes on failure.

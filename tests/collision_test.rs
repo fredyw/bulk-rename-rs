@@ -66,7 +66,7 @@ fn collision_suffix() {
         .with_collision_strategy(CollisionStrategy::Suffix);
     bulk_rename.execute(NoOpCallback::new());
 
-    // One should be target (1).txt, another target (2).txt (order not guaranteed due to parallelism)
+    // One should be target (1).txt, another target (2).txt
     assert!(Path::new("tmp_suffix/target.txt").exists());
     assert!(Path::new("tmp_suffix/target (1).txt").exists());
     assert!(Path::new("tmp_suffix/target (2).txt").exists());

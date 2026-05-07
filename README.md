@@ -144,7 +144,7 @@ fn main() {
         r"new_$1.txt"
     ).unwrap();
     
-    // Execute renames in parallel
+    // Execute renames
     bulk_rename.execute(NoOpCallback::new());
 }
 ```
