@@ -1,9 +1,10 @@
+#![cfg(unix)]
+
 use assert_cmd::Command;
 use std::fs::File;
 use tempfile::tempdir;
 
 #[test]
-#[cfg(unix)]
 fn test_cli_symlink_ignore() {
     let dir = tempdir().unwrap();
     let file = dir.path().join("file.txt");
@@ -28,7 +29,6 @@ fn test_cli_symlink_ignore() {
 }
 
 #[test]
-#[cfg(unix)]
 fn test_cli_symlink_rename() {
     let dir = tempdir().unwrap();
     let file = dir.path().join("file.txt");
@@ -58,7 +58,6 @@ fn test_cli_symlink_rename() {
 }
 
 #[test]
-#[cfg(unix)]
 fn test_cli_symlink_follow() {
     let dir = tempdir().unwrap();
     let file = dir.path().join("file.txt");
