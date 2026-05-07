@@ -31,6 +31,7 @@ Options:
   -p, --replacement <REPLACEMENT>  Set the replacement (required unless --undo is present)
   -d, --dry-run                    Perform a dry-run
   -q, --quiet                      Run in quiet mode
+  -i, --interactive                Prompt for confirmation before each rename
   -c, --collision <STRATEGY>       Set the collision strategy [default: skip] [possible values: skip, overwrite, suffix]
       --undo                       Undo the previous rename operation
       --history-file <PATH>        Set the history file path [default: .bmv-undo.json]

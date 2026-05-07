@@ -5,6 +5,7 @@ extern crate clap;
 use bmv::{BulkRename, Callback, CollisionStrategy, HistoryCallback, RenameHistory};
 use clap::Parser;
 use std::collections::HashSet;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
@@ -42,6 +43,10 @@ struct Args {
     /// Set the history file path for undo/rollback.
     #[arg(long, default_value = ".bmv-undo.json")]
     history_file: PathBuf,
+
+    /// Prompt for confirmation before each rename.
+    #[arg(short = 'i', long, default_value_t = false)]
+    interactive: bool,
 }
 
 /// A callback implementation for the CLI.
@@ -106,19 +111,57 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
                 println!("Dry-run: {} (skipped due to collision)", old_path.display());
             }
         });
+    } else if args.interactive {
+        let targets = Mutex::new(HashSet::new());
+        let history = Mutex::new(Vec::new());
+        let callback = HistoryCallback::new(CliCallback::new(args.quiet), &history);
+
+        bulk_rename.bulk_rename_fn_seq(|old_path, new_path| {
+            if let Some(final_path) = bulk_rename.resolve_collision(old_path, new_path, &targets) {
+                if confirm(old_path, &final_path) {
+                    match std::fs::rename(old_path, &final_path) {
+                        Ok(_) => callback.on_ok(old_path, &final_path),
+                        Err(e) => callback.on_error(old_path, &final_path, e),
+                    }
+                }
+            }
+        });
+
+        save_history(&args.history_file, history.into_inner().unwrap())?;
     } else {
         let history = Mutex::new(Vec::new());
         let callback = HistoryCallback::new(CliCallback::new(args.quiet), &history);
         bulk_rename.bulk_rename(callback);
 
-        let records = history.into_inner().unwrap();
-        if !records.is_empty() {
-            let history = RenameHistory { records };
-            let json = serde_json::to_string_pretty(&history)?;
-            std::fs::write(&args.history_file, json)?;
-        }
+        save_history(&args.history_file, history.into_inner().unwrap())?;
     }
 
+    Ok(())
+}
+
+fn confirm(old_path: &Path, new_path: &Path) -> bool {
+    print!(
+        "Rename {} to {}? [y/N] ",
+        old_path.display(),
+        new_path.display()
+    );
+    io::stdout().flush().unwrap();
+    let mut input = String::new();
+    match io::stdin().read_line(&mut input) {
+        Ok(_) => input.trim().to_lowercase() == "y",
+        Err(_) => false,
+    }
+}
+
+fn save_history(
+    history_file: &Path,
+    records: Vec<bmv::models::RenameRecord>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if !records.is_empty() {
+        let history = RenameHistory { records };
+        let json = serde_json::to_string_pretty(&history)?;
+        std::fs::write(history_file, json)?;
+    }
     Ok(())
 }
 

@@ -247,3 +247,50 @@ fn test_cli_undo_no_history() {
         .failure()
         .stderr(predicate::str::contains("No such file or directory"));
 }
+#[test]
+fn test_cli_interactive_yes() {
+    let dir = tempdir().unwrap();
+    let file1 = dir.path().join("test_1.txt");
+    File::create(&file1).unwrap();
+
+    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    cmd.arg("-f")
+        .arg(dir.path())
+        .arg("-r")
+        .arg("test_(\\d+).txt")
+        .arg("-p")
+        .arg("file_${1}.txt")
+        .arg("-i")
+        .arg("--history-file")
+        .arg(dir.path().join("history.json"))
+        .write_stdin("y\n");
+
+    cmd.assert().success();
+
+    assert!(dir.path().join("file_1.txt").exists());
+    assert!(!file1.exists());
+}
+
+#[test]
+fn test_cli_interactive_no() {
+    let dir = tempdir().unwrap();
+    let file1 = dir.path().join("test_1.txt");
+    File::create(&file1).unwrap();
+
+    let mut cmd = Command::cargo_bin("bmv").unwrap();
+    cmd.arg("-f")
+        .arg(dir.path())
+        .arg("-r")
+        .arg("test_(\\d+).txt")
+        .arg("-p")
+        .arg("file_${1}.txt")
+        .arg("-i")
+        .arg("--history-file")
+        .arg(dir.path().join("history.json"))
+        .write_stdin("n\n");
+
+    cmd.assert().success();
+
+    assert!(!dir.path().join("file_1.txt").exists());
+    assert!(file1.exists());
+}
