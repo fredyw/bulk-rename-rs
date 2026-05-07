@@ -2,11 +2,14 @@
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![CI](https://github.com/fredyw/bmv/actions/workflows/ci.yml/badge.svg)](https://github.com/fredyw/bmv/actions/workflows/ci.yml)
+[![Publish](https://github.com/fredyw/bmv/actions/workflows/publish.yml/badge.svg)](https://github.com/fredyw/bmv/actions/workflows/publish.yml)
+[![Crates.io](https://img.shields.io/crates/v/bmv.svg)](https://crates.io/crates/bmv)
 
 A powerful command-line tool for bulk renaming files using regular expressions, built with Rust for speed and safety.
 
 ## Table of Contents
 
+- [Installation](#installation)
 - [Quick Start](#quick-start)
 - [Usage](#usage)
     - [CLI Reference](#cli-reference)
@@ -17,9 +20,48 @@ A powerful command-line tool for bulk renaming files using regular expressions, 
     - [Collision Handling](#collision-handling)
     - [Transactional Renames](#transactional-renames)
     - [Filtering & Modes](#filtering--modes)
-- [Installation](#installation)
+- [Development](#development)
+    - [Building](#building)
+    - [Testing](#testing)
+    - [Releasing](#releasing)
 - [Contributing](#contributing)
 - [License](#license)
+
+---
+
+## Installation
+
+### From Prebuilt Binaries
+
+**Linux & macOS:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/fredyw/bmv/main/install.sh | bash
+```
+
+**Windows (PowerShell):**
+
+```powershell
+iwr -useb https://raw.githubusercontent.com/fredyw/bmv/main/install.ps1 | iex
+```
+
+### From crates.io
+
+If you have Rust installed, you can install `bmv` directly from [crates.io](https://crates.io/crates/bmv):
+
+```bash
+cargo install bmv
+```
+
+### From Source
+
+```bash
+git clone https://github.com/fredyw/bmv.git
+cd bmv
+./install.sh --source
+```
+
+---
 
 ## Quick Start
 
@@ -153,12 +195,42 @@ Ensure consistency during bulk operations:
 
 ---
 
-## Installation
+## Development
+
+### Building
+
+To build the project, you need to have Rust installed. You can install it from [here](https://www.rust-lang.org/tools/install).
+
+Once you have Rust installed, you can build the project by running the following command:
 
 ```bash
-# Build and install locally
-./install.sh
+./build.sh --release
 ```
+
+The binary will be located in `target/release/bmv`.
+
+### Testing
+
+To run the tests, including formatting and linting checks, you can use the following command:
+
+```bash
+./test.sh
+```
+
+### Releasing
+
+To create a new release, use the provided `release.sh` script:
+
+```bash
+./release.sh <version>
+```
+
+Example:
+```bash
+./release.sh 0.1.0
+```
+
+---
 
 ## Contributing
 
