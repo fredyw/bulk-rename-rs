@@ -361,15 +361,27 @@ impl<'a> BulkRename<'a> {
                     rustpython_vm::compiler::Mode::Exec,
                     "<script>".to_owned(),
                 )
-                .map_err(|e| Error::PythonError(format!("{:?}", e)))?;
+                .map_err(|e| Error::PythonError(format!("{}", e)))?;
 
-            vm.run_code_obj(code_obj, scope.clone())
-                .map_err(|e| Error::PythonError(format!("{:?}", e)))?;
+            vm.run_code_obj(code_obj, scope.clone()).map_err(|e| {
+                let msg = if let Some(first_arg) = e.args().iter().next() {
+                    first_arg
+                        .str(vm)
+                        .map(|s| s.to_string())
+                        .unwrap_or_else(|_| "Unknown Python error".to_string())
+                } else {
+                    "Unknown Python error".to_string()
+                };
+                Error::PythonError(msg)
+            })?;
 
             if let Ok(result) = scope.globals.get_item("result", vm) {
-                let result_str: String = result
-                    .try_into_value(vm)
-                    .map_err(|e| Error::PythonError(format!("{:?}", e)))?;
+                let result_str: String = result.clone().try_into_value(vm).map_err(|_| {
+                    Error::PythonError(format!(
+                        "The 'result' variable must be a string, but found type '{}'.",
+                        result.class().name()
+                    ))
+                })?;
                 return Ok(result_str);
             }
 

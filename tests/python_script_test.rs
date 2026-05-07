@@ -55,3 +55,75 @@ fn test_python_import_re() {
 
     assert!(dir.path().join("file.txt").exists());
 }
+
+#[test]
+fn test_python_missing_result() {
+    let dir = tempdir().unwrap();
+    let file1 = dir.path().join("test_file.txt");
+    File::create(&file1).unwrap();
+
+    let mut cmd = Command::cargo_bin("bren").unwrap();
+    cmd.arg("-f")
+        .arg(dir.path())
+        .arg("--python-script")
+        .arg("x = 1");
+
+    cmd.assert()
+        .success() // The tool currently continues on script error but prints to stderr
+        .stderr(predicates::str::contains(
+            "Python script must set the 'result' variable to the new filename.",
+        ));
+}
+
+#[test]
+fn test_python_wrong_type() {
+    let dir = tempdir().unwrap();
+    let file1 = dir.path().join("test_file.txt");
+    File::create(&file1).unwrap();
+
+    let mut cmd = Command::cargo_bin("bren").unwrap();
+    cmd.arg("-f")
+        .arg(dir.path())
+        .arg("--python-script")
+        .arg("result = 123");
+
+    cmd.assert()
+        .success()
+        .stderr(predicates::str::contains(
+            "The 'result' variable must be a string, but found type 'int'.",
+        ));
+}
+
+#[test]
+fn test_python_runtime_error() {
+    let dir = tempdir().unwrap();
+    let file1 = dir.path().join("test_file.txt");
+    File::create(&file1).unwrap();
+
+    let mut cmd = Command::cargo_bin("bren").unwrap();
+    cmd.arg("-f")
+        .arg(dir.path())
+        .arg("--python-script")
+        .arg("1 / 0");
+
+    cmd.assert()
+        .success()
+        .stderr(predicates::str::contains("division by zero"));
+}
+
+#[test]
+fn test_python_compile_error() {
+    let dir = tempdir().unwrap();
+    let file1 = dir.path().join("test_file.txt");
+    File::create(&file1).unwrap();
+
+    let mut cmd = Command::cargo_bin("bren").unwrap();
+    cmd.arg("-f")
+        .arg(dir.path())
+        .arg("--python-script")
+        .arg("if True");
+
+    cmd.assert()
+        .success()
+        .stderr(predicates::str::contains("invalid syntax"));
+}
