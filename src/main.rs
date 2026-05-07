@@ -2,7 +2,6 @@
 extern crate bmv;
 extern crate clap;
 
-
 use bmv::bulk_rename::BulkRename;
 use bmv::bulk_rename::Callback;
 use bmv::bulk_rename::Error;
