@@ -501,10 +501,10 @@ impl<'a> BulkRename<'a> {
             let re_i = Regex::new(r"\{i(?::(\d+))?\}").unwrap();
             result = re_i
                 .replace_all(&result, |caps: &regex::Captures| {
-                    if let Some(padding) = caps.get(1) {
-                        if let Ok(p) = padding.as_str().parse::<usize>() {
-                            return format!("{:0>width$}", i, width = p);
-                        }
+                    if let Some(padding) = caps.get(1)
+                        && let Ok(p) = padding.as_str().parse::<usize>()
+                    {
+                        return format!("{:0>width$}", i, width = p);
                     }
                     i.to_string()
                 })

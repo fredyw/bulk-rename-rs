@@ -209,12 +209,11 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         bulk_rename.run(|old_path, new_path| {
             if let Some(final_path) =
                 bulk_rename.resolve_collision(old_path, new_path, &mut targets)
+                && confirm(old_path, &final_path)
             {
-                if confirm(old_path, &final_path) {
-                    match std::fs::rename(old_path, &final_path) {
-                        Ok(_) => callback.on_ok(old_path, &final_path),
-                        Err(e) => callback.on_error(old_path, &final_path, e),
-                    }
+                match std::fs::rename(old_path, &final_path) {
+                    Ok(_) => callback.on_ok(old_path, &final_path),
+                    Err(e) => callback.on_error(old_path, &final_path, e),
                 }
             }
         });

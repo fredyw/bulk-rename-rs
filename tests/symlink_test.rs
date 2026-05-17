@@ -51,10 +51,12 @@ fn test_cli_symlink_rename() {
     assert!(!link.exists());
     assert!(dir.path().join("new_link.txt").exists());
     // Ensure it's still a symlink
-    assert!(std::fs::symlink_metadata(dir.path().join("new_link.txt"))
-        .unwrap()
-        .file_type()
-        .is_symlink());
+    assert!(
+        std::fs::symlink_metadata(dir.path().join("new_link.txt"))
+            .unwrap()
+            .file_type()
+            .is_symlink()
+    );
 }
 
 #[test]

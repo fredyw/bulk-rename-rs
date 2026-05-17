@@ -1,7 +1,7 @@
 [package]
 name = "bulk-rename-rs"
 version = "0.2.0"
-edition = "2021"
+edition = "2024"
 authors = ["Fredy Wijaya"]
 description = "A powerful bulk file renaming tool and library with regex support, Python scripting, and transactional safety."
 license = "Apache-2.0"
