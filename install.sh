@@ -76,6 +76,8 @@ if [[ "$PLATFORM" == "macos" && "$ARCH_NAME" == "arm64" ]]; then
   ARTIFACT_NAME="bren-macos-arm64"
 elif [[ "$PLATFORM" == "linux" && "$ARCH_NAME" == "x86_64" ]]; then
   ARTIFACT_NAME="bren-linux-x86_64"
+elif [[ "$PLATFORM" == "linux" && "$ARCH_NAME" == "arm64" ]]; then
+  ARTIFACT_NAME="bren-linux-arm64"
 else
   echo "Error: No prebuilt binary found for $PLATFORM-$ARCH_NAME."
   if [[ "$PLATFORM" == "macos" && "$ARCH_NAME" == "x86_64" ]]; then
