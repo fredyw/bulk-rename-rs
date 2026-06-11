@@ -12,6 +12,10 @@ A powerful command-line tool for bulk renaming files using regular expressions, 
 ## Table of Contents
 
 - [Installation](#installation)
+    - [From Prebuilt Binaries](#from-prebuilt-binaries)
+    - [From crates.io](#from-cratesio)
+    - [From Source](#from-source)
+    - [Shell Completion](#shell-completion)
 - [Quick Start](#quick-start)
 - [Usage](#usage)
     - [CLI Reference](#cli-reference)
@@ -65,6 +69,20 @@ cargo install bulk-rename-rs
 git clone https://github.com/fredyw/bulk-rename-rs.git
 cd bulk-rename-rs
 ./install.sh --source
+```
+
+### Shell Completion
+
+Generate shell completion scripts for your favorite shell using the `--generate-completion` option.
+
+**Bash:**
+```bash
+source <(bren --generate-completion bash)
+```
+
+**Zsh:**
+```zsh
+source <(bren --generate-completion zsh)
 ```
 
 ---
@@ -129,6 +147,7 @@ Options:
   -T, --transaction <STRATEGY>     Set the transaction strategy [default: continue] [possible values: continue, abort, rollback]
       --python-script <SCRIPT>     Inline Python script for custom renaming logic
       --python-file <PATH>         Python script file for custom renaming logic
+      --generate-completion <SH>   Generate shell completion script for the specified shell [possible values: bash, elvish, fish, powershell, zsh]
   -h, --help                       Print help
   -V, --version                    Print version
 ```

@@ -488,3 +488,23 @@ fn test_cli_rename_all() {
     assert!(!sub.exists());
     assert!(!file.exists());
 }
+
+#[test]
+fn test_cli_generate_completion_bash() {
+    // Test bash completion
+    let mut cmd = Command::cargo_bin("bren").unwrap();
+    cmd.arg("--generate-completion").arg("bash");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("complete -F"));
+}
+
+#[test]
+fn test_cli_generate_completion_zsh() {
+    // Test zsh completion
+    let mut cmd = Command::cargo_bin("bren").unwrap();
+    cmd.arg("--generate-completion").arg("zsh");
+    cmd.assert()
+        .success()
+        .stdout(predicate::str::contains("#compdef bren"));
+}

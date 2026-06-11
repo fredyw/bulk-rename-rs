@@ -6,24 +6,24 @@ use bulk_rename_rs::{
     BulkRename, Callback, CollisionStrategy, HistoryCallback, RenameHistory, SymlinkStrategy,
     TransactionStrategy,
 };
-use clap::{Parser, ValueEnum};
+use clap::{CommandFactory, Parser, ValueEnum};
 use std::collections::HashSet;
 use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 
 #[derive(Parser, Debug)]
-#[command(author, version, about, long_about = None)]
+#[command(name = "bren", author, version, about, long_about = None)]
 struct Args {
     /// Set the directory.
-    #[arg(short = 'f', long)]
-    dir: PathBuf,
+    #[arg(short = 'f', long, required_unless_present = "generate_completion")]
+    dir: Option<PathBuf>,
 
     /// Set the regex.
-    #[arg(short = 'r', long, required_unless_present_any = ["undo", "python_script", "python_file"])]
+    #[arg(short = 'r', long, required_unless_present_any = ["undo", "python_script", "python_file", "generate_completion"])]
     regex: Option<String>,
 
     /// Set the replacement.
-    #[arg(short = 'p', long, required_unless_present_any = ["undo", "python_script", "python_file"])]
+    #[arg(short = 'p', long, required_unless_present_any = ["undo", "python_script", "python_file", "generate_completion"])]
     replacement: Option<String>,
 
     /// Perform a dry-run.
@@ -93,6 +93,10 @@ struct Args {
     /// Python script file.
     #[arg(long)]
     python_file: Option<PathBuf>,
+
+    /// Generate shell completion script for the specified shell.
+    #[arg(long, value_enum, value_name = "SH")]
+    generate_completion: Option<clap_complete::Shell>,
 }
 
 #[derive(ValueEnum, Clone, Debug, Default, PartialEq, Eq)]
@@ -159,6 +163,13 @@ impl Callback for CliCallback {
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
+    if let Some(shell) = args.generate_completion {
+        let mut cmd = Args::command();
+        let name = cmd.get_name().to_string();
+        clap_complete::generate(shell, &mut cmd, name, &mut io::stdout());
+        return Ok(());
+    }
+
     if args.undo {
         let content = std::fs::read_to_string(&args.history_file)?;
         let history = serde_json::from_str::<RenameHistory>(&content)?;
@@ -166,7 +177,12 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
-    let path = args.dir.as_path();
+    let path = args.dir.as_deref().ok_or_else(|| {
+        io::Error::new(
+            io::ErrorKind::InvalidInput,
+            "Missing directory path (-f/--dir)",
+        )
+    })?;
     let regex = args.regex.as_deref().unwrap_or("");
     let replacement = args.replacement.as_deref().unwrap_or("");
 
