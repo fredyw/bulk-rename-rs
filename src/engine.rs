@@ -336,10 +336,12 @@ impl<'a> BulkRename<'a> {
             return Ok(name.to_string());
         };
 
-        let interp = rustpython::Interpreter::with_init(Default::default(), |vm| {
-            vm.add_native_modules(rustpython_stdlib::get_module_inits());
-            vm.add_frozen(rustpython_pylib::FROZEN_STDLIB);
-        });
+        let builder = rustpython::Interpreter::builder(Default::default());
+        let ctx = builder.ctx.clone();
+        let interp = builder
+            .add_native_modules(&rustpython_stdlib::stdlib_module_defs(&ctx))
+            .add_frozen_modules(rustpython_pylib::FROZEN_STDLIB)
+            .build();
         interp.enter(|vm| {
             let scope = vm.new_scope_with_builtins();
             scope

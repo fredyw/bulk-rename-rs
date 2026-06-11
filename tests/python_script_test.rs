@@ -123,5 +123,5 @@ fn test_python_compile_error() {
 
     cmd.assert()
         .success()
-        .stderr(predicates::str::contains("invalid syntax"));
+        .stderr(predicates::str::contains("Expected"));
 }
